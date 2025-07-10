@@ -74,7 +74,7 @@ contract MyAccount is AccessControl {
 	function giveCredential(
 		address to,
 		bytes32 credId,
-		string calldata disclosureURri
+		string calldata disclosureUri
 	) external onlyRole(DID_ADMIN_ROLE) {
 		emit CredentialSent(msg.sender, to, credId);
 	}
