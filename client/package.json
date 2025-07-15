@@ -2,6 +2,6 @@
   "name": "did-project-client",
   "version": "1.0.0",
   "scripts": {
-    "start": "python3 -m http.server 3000"
+    "start": "cd src && python3 -m http.server 3000 && open http://localhost:3000"
   }
 }
