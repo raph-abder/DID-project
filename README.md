@@ -5,18 +5,21 @@ This project aims to implement Decentralized Identification (DID) using smart co
 
 The DID Project provides a secure framework for:
 
-    - Storing decentralized identities on the blockchain
+- Storing decentralized identities on the blockchain
 
-    - Allowing institutions to issue verifiable credentials to DID holders
+- Allowing institutions to issue verifiable credentials to DID holders
 
-    - Enhancing transparency and trust between users and credential issuers
+- Enhancing transparency and trust between users and credential issuers
 
 This solution can be the foundation for secure and privacy-respecting decentralized identity 
 
 ## Architecture 
-The architecture of this project was inspired from [this GitHub repo](https://github.com/Faizack/Supply-Chain-Blockchain?tab=readme-ov-file).
-
-
+The architecture of this project was inspired from [this GitHub repo](https://github.com/Faizack/Supply-Chain-Blockchain?tab=readme-ov-file) from Faizack about supply chain in
+blockchain. The smart contract is written in solidity (```.sol```) and it is compiled, migrated and after deployed with Truffle.js
+on a Ganache blockchain test network. The front end is in Web3.js and communicates with the test network by connecting the wallets with Meta Mask
+wallet. Here is an image to illustrate the process that was also taken by the repository above : 
+![blockchain diagram](./images/Blockchain-app-diagram.png)
+ 
 ## Setting up the Environment
 1. 
 
