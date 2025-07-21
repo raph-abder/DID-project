@@ -55,7 +55,11 @@ contract DIDRegistry {
         require(bytes(didId).length > 0, "DID ID cannot be empty");
         require(bytes(publicKey).length > 0, "Public key cannot be empty");
         require(dids[didId].owner == address(0), "DID already exists");
-        require(bytes(ownerToDID[msg.sender]).length == 0, "Address already owns a DID");
+
+        string memory existingDID = ownerToDID[msg.sender];
+        if (bytes(existingDID).length > 0) {
+            require(!dids[existingDID].isActive, "Address already owns an active DID. Deactivate it first.");
+        }
 
         dids[didId] = DID({
             owner: msg.sender,
@@ -70,6 +74,7 @@ contract DIDRegistry {
 
     function deactivateDID(string memory didId) external onlyDIDOwner(didId) {
         dids[didId].isActive = false;
+        delete ownerToDID[msg.sender];
         emit DIDDeactivated(didId);
     }
 
