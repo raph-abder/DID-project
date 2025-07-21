@@ -1,0 +1,24 @@
+.contract-setup {
+  margin-bottom: 20px;
+}
+
+.set-contract-button {
+  width: 100%;
+  margin: 10px 0;
+}
+
+.current-contract {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #e8f5e8;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.contract-address {
+  font-family: monospace;
+  word-break: break-all;
+  color: #155724;
+}
