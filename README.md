@@ -91,4 +91,5 @@ For this repository, the necessary installs are the following :
 
 ## Work Flow 
 
+![DID-workflow](./images/DID-project.png)
 
