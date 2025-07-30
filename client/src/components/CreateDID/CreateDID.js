@@ -30,24 +30,28 @@ const CreateDID = () => {
     if (!contract || !account) return;
     
     try {
-      const existingDIDId = await contract.methods.ownerToDID(account).call();
-      if (existingDIDId && existingDIDId.length > 0) {
-        const didInfo = await contract.methods.getDID(existingDIDId).call();
-        console.log("Existing DID:", existingDIDId, "Active:", didInfo.isActive);
+      const existingDIDs = await contract.methods.getDIDsByController(account).call();
+      if (existingDIDs && existingDIDs.length > 0) {
+        const activeDIDs = [];
+        for (const didId of existingDIDs) {
+          const isActive = await contract.methods.isDIDActive(didId).call();
+          if (isActive) {
+            activeDIDs.push(didId);
+          }
+        }
         
-        if (didInfo.isActive) {
+        if (activeDIDs.length > 0) {
           setResult({
-            type: "error",
-            message: `This address already owns an active DID: ${existingDIDId}. Please deactivate it first if you want to create a new one.`
+            type: "info",
+            message: `This address already owns ${activeDIDs.length} active DID(s): ${activeDIDs.join(', ')}. You can create additional DIDs.`
           });
         }
       }
     } catch (error) {
-      console.error("Error checking existing DID:", error);
+      console.error("Error checking existing DIDs:", error);
     }
   };
 
-  // Check for existing DID when contract or account changes
   React.useEffect(() => {
     if (contract && account) {
       checkExistingDID();
@@ -91,12 +95,6 @@ const CreateDID = () => {
 
       setDidId("");
       setPublicKey("");
-      // } catch (error) {
-      //   setResult({
-      //     type: "error",
-      //     message: "Error creating DID: " + error.message,
-      //   });
-      // } 
       } catch (err) {
       console.error("Full RPC error creating DID:", err);
 
@@ -154,7 +152,7 @@ const CreateDID = () => {
           disabled={!contract || !account}
           style={{ marginBottom: '10px' }}
         >
-          Check for Existing DID
+          Check for Existing DIDs
         </button>
         
         <form onSubmit={handleCreateDID}>
