@@ -3,124 +3,124 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-
-contract DIDRegistry {
+contract DIDRegistry is Ownable {
     using ECDSA for bytes32;
     using MessageHashUtils for bytes32;
 
-    struct DID {
-        address owner;
+    struct DIDDocument {
+        string id;
+        address controller;
         string publicKey;
         uint256 created;
+        uint256 updated;
         bool isActive;
     }
 
-    mapping(string => DID) public dids;
-    mapping(address => string) public ownerToDID;
+    mapping(string => DIDDocument) public didDocuments;
+    mapping(address => string[]) public controllerToDIDs;
     mapping(string => bool) public trustedIssuers;
 
-    event DIDCreated(
-        string indexed didId,
-        address indexed owner,
-        string publicKey
-    );
+    event DIDCreated(string indexed didId, address indexed controller, string publicKey);
+    event DIDUpdated(string indexed didId);
     event DIDDeactivated(string indexed didId);
     event TrustedIssuerAdded(string indexed issuerDID);
     event TrustedIssuerRemoved(string indexed issuerDID);
 
-    address public contractOwner;
+    constructor() Ownable(msg.sender) {}
 
-    constructor() {
-        contractOwner = msg.sender;
-    }
-
-    modifier onlyDIDOwner(string memory didId) {
-        require(dids[didId].owner == msg.sender, "Not DID owner");
-        require(dids[didId].isActive, "DID not active");
-        _;
-    }
-
-    modifier onlyContractOwner() {
-        require(msg.sender == contractOwner, "Not contract owner");
+    modifier onlyDIDController(string memory didId) {
+        require(didDocuments[didId].controller == msg.sender, "Not DID controller");
+        require(didDocuments[didId].isActive, "DID not active");
         _;
     }
 
     modifier didExists(string memory didId) {
-        require(dids[didId].owner != address(0), "DID does not exist");
+        require(didDocuments[didId].controller != address(0), "DID does not exist");
         _;
     }
 
     function createDID(string memory didId, string memory publicKey) external {
         require(bytes(didId).length > 0, "DID ID cannot be empty");
         require(bytes(publicKey).length > 0, "Public key cannot be empty");
-        require(dids[didId].owner == address(0), "DID already exists");
+        require(didDocuments[didId].controller == address(0), "DID already exists");
 
-        string memory existingDID = ownerToDID[msg.sender];
-        if (bytes(existingDID).length > 0) {
-            require(!dids[existingDID].isActive, "Address already owns an active DID. Deactivate it first.");
-        }
-
-        dids[didId] = DID({
-            owner: msg.sender,
+        didDocuments[didId] = DIDDocument({
+            id: didId,
+            controller: msg.sender,
             publicKey: publicKey,
             created: block.timestamp,
+            updated: block.timestamp,
             isActive: true
         });
-        ownerToDID[msg.sender] = didId;
+
+        controllerToDIDs[msg.sender].push(didId);
 
         emit DIDCreated(didId, msg.sender, publicKey);
     }
 
-    function deactivateDID(string memory didId) external onlyDIDOwner(didId) {
-        dids[didId].isActive = false;
-        delete ownerToDID[msg.sender];
+    function updateDID(string memory didId, string memory newPublicKey) external onlyDIDController(didId) {
+        require(bytes(newPublicKey).length > 0, "Public key cannot be empty");
+        
+        didDocuments[didId].publicKey = newPublicKey;
+        didDocuments[didId].updated = block.timestamp;
+        
+        emit DIDUpdated(didId);
+    }
+
+    function deactivateDID(string memory didId) external onlyDIDController(didId) {
+        didDocuments[didId].isActive = false;
+        didDocuments[didId].updated = block.timestamp;
         emit DIDDeactivated(didId);
     }
 
-    function addTrustedIssuer(string memory issuerDID) external onlyContractOwner {
-        require(dids[issuerDID].isActive, "Issuer DID not active");
+    function addTrustedIssuer(string memory issuerDID) external onlyOwner {
+        require(didDocuments[issuerDID].isActive, "Issuer DID not active");
         require(!trustedIssuers[issuerDID], "Issuer already trusted");
         trustedIssuers[issuerDID] = true;
         emit TrustedIssuerAdded(issuerDID);
     }
 
-    function removeTrustedIssuer(string memory issuerDID) external onlyContractOwner {
+    function removeTrustedIssuer(string memory issuerDID) external onlyOwner {
         trustedIssuers[issuerDID] = false;
         emit TrustedIssuerRemoved(issuerDID);
     }
 
     function verifySignature(string memory didId, bytes32 messageHash, bytes memory signature
-    ) external view returns (bool isValid) {
-        require(dids[didId].isActive, "DID not active");
+    ) external view didExists(didId) returns (bool) {
+        require(didDocuments[didId].isActive, "DID not active");
 
-        bytes32 ethSignedMessagaHash = messageHash.toEthSignedMessageHash();
-        address recoverdSigner = ethSignedMessagaHash.recover(signature);
-        return recoverdSigner == dids[didId].owner;
+        bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
+        address recoveredSigner = ethSignedMessageHash.recover(signature);
+        return recoveredSigner == didDocuments[didId].controller;
     }
 
     function verifyDataSignature(string memory didId, bytes memory data, bytes memory signature
-    ) external view returns (bool isValid) {
-        require(dids[didId].isActive, "DID not active");
+    ) external view didExists(didId) returns (bool) {
+        require(didDocuments[didId].isActive, "DID not active");
         
         bytes32 dataHash = keccak256(data);
         bytes32 ethSignedMessageHash = dataHash.toEthSignedMessageHash();
 
         address recoveredSigner = ethSignedMessageHash.recover(signature);
-        return recoveredSigner == dids[didId].owner;
+        return recoveredSigner == didDocuments[didId].controller;
     }
 
-    function getDID (string memory didId) external view returns (DID memory) {
-    DID storage did = dids[didId];
-    return (did);
+    function getDIDDocument(string memory didId) external view didExists(didId) returns (DIDDocument memory) {
+        return didDocuments[didId];
     }
 
-    function isTrustedIssuer(string memory didId) external view returns (bool isTrusted) {
-    return trustedIssuers[didId] && dids[didId].isActive;
+    function isTrustedIssuer(string memory didId) external view returns (bool) {
+        return trustedIssuers[didId] && didDocuments[didId].isActive;
     }
 
-    function getDIDByOwner(address owner) external view returns (string memory didId) {
-        return ownerToDID[owner];
+    function getDIDsByController(address controller) external view returns (string[] memory) {
+        return controllerToDIDs[controller];
+    }
+
+    function isDIDActive(string memory didId) external view didExists(didId) returns (bool) {
+        return didDocuments[didId].isActive;
     }
 
     
