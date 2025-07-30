@@ -34,34 +34,38 @@ const ContractSetup = ({ contractAddress, error, onSetContract, disabled }) => {
   return (
     <div className="contract-setup card">
       <h3>Contract Configuration</h3>
-      <div className="form-group">
-        <label htmlFor="contractAddress">Contract Address:</label>
-        <input
-          type="text"
-          id="contractAddress"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Enter deployed contract address"
-          disabled={disabled}
-        />
-      </div>
-      <button 
-        onClick={handleSetContract} 
-        disabled={disabled || isLoading}
-        className="set-contract-button"
-      >
-        {isLoading ? 'Setting Contract...' : 'Set Contract'}
-      </button>
+      
+      {contractAddress ? (
+        <div className="current-contract">
+          <strong>Connected Contract Address:</strong>
+          <span className="contract-address">{contractAddress}</span>
+          <div className="contract-status">✅ Automatically connected</div>
+        </div>
+      ) : (
+        <>
+          <div className="form-group">
+            <label htmlFor="contractAddress">Contract Address:</label>
+            <input
+              type="text"
+              id="contractAddress"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Enter deployed contract address"
+              disabled={disabled}
+            />
+          </div>
+          <button 
+            onClick={handleSetContract} 
+            disabled={disabled || isLoading}
+            className="set-contract-button"
+          >
+            {isLoading ? 'Setting Contract...' : 'Set Contract'}
+          </button>
+        </>
+      )}
       
       {error && <ResultDisplay type="error" message={error} />}
       {result && <ResultDisplay message={result.message} />}
-      
-      {contractAddress && (
-        <div className="current-contract">
-          <strong>Current Contract:</strong>
-          <span className="contract-address">{contractAddress}</span>
-        </div>
-      )}
     </div>
   );
 };

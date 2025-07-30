@@ -22,3 +22,10 @@
   word-break: break-all;
   color: #155724;
 }
+
+.contract-status {
+  font-size: 0.9em;
+  color: #28a745;
+  font-weight: bold;
+  margin-top: 5px;
+}
