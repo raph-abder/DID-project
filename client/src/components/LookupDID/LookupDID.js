@@ -35,12 +35,14 @@ const LookupDID = () => {
     setResult(null);
 
     try {
-      const didInfo = await contract.methods.getDID(didId).call();
+      const didInfo = await contract.methods.getDIDDocument(didId).call();
       
-      const resultText = `DID Information:
-Owner: ${didInfo.owner}
+      const resultText = `DID Document Information:
+ID: ${didInfo.id}
+Controller: ${didInfo.controller}
 Public Key: ${didInfo.publicKey}
 Created: ${new Date(didInfo.created * 1000).toLocaleString()}
+Updated: ${new Date(didInfo.updated * 1000).toLocaleString()}
 Active: ${didInfo.isActive}`;
       
       setResult({ type: 'success', message: resultText });

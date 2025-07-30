@@ -79,17 +79,17 @@ const ManageDID = () => {
     setLookupResult(null);
 
     try {
-      const didId = await contract.methods.getDIDByOwner(ownerAddress).call();
+      const didIds = await contract.methods.getDIDsByController(ownerAddress).call();
       
-      if (didId) {
+      if (didIds && didIds.length > 0) {
         setLookupResult({
           type: 'success',
-          message: `DID ID for owner ${ownerAddress}: ${didId}`
+          message: `Found ${didIds.length} DID(s) for controller ${ownerAddress}: ${didIds.join(', ')}`
         });
       } else {
         setLookupResult({
           type: 'error',
-          message: `No DID found for owner ${ownerAddress}`
+          message: `No DIDs found for controller ${ownerAddress}`
         });
       }
     } catch (error) {
@@ -150,10 +150,10 @@ const ManageDID = () => {
         </div>
 
         <div className="card">
-          <h3>Find DID by Owner</h3>
+          <h3>Find DIDs by Controller</h3>
           <form onSubmit={handleFindDIDByOwner}>
             <div className="form-group">
-              <label htmlFor="ownerAddress">Owner Address:</label>
+              <label htmlFor="ownerAddress">Controller Address:</label>
               <input
                 type="text"
                 id="ownerAddress"
@@ -168,7 +168,7 @@ const ManageDID = () => {
               type="submit" 
               disabled={!contract || isLookingUp}
             >
-              {isLookingUp ? 'Searching...' : 'Find DID'}
+              {isLookingUp ? 'Searching...' : 'Find DIDs'}
             </button>
           </form>
           
