@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useWeb3 } from "./hooks/useWeb3";
 import Header from "./components/Header/Header";
 import Home from "./components/Home/Home";
-import LookupDID from "./components/LookupDID/LookupDID";
+import IssueVC from "./components/IssueVC/IssueVC";
+import VerifyVC from "./components/VerifyVC/VerifyVC";
 import ManageDID from "./components/ManageDID/ManageDID";
 import "./App.css";
 
