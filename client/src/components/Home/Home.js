@@ -1,13 +1,20 @@
-import React from 'react';
-import { useWeb3 } from '../../hooks/useWeb3';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useContract } from '../../hooks/useContract';
 import WalletConnection from '../WalletConnection/WalletConnection';
 import ContractSetup from '../ContractSetup/ContractSetup';
 import './Home.css';
 
-const Home = () => {
-  const { web3, account, isConnected, error: web3Error, connectWallet } = useWeb3();
+const Home = ({ web3State }) => {
+  const navigate = useNavigate();
+  const { web3, account, isConnected, isLoading, error: web3Error, connectWallet } = web3State;
   const { contractAddress, error: contractError, setContract } = useContract(web3);
+
+  useEffect(() => {
+    if (!isLoading && isConnected && account) {
+      navigate('/manage');
+    }
+  }, [isLoading, isConnected, account, navigate]);
 
   return (
     <div className="page-container">

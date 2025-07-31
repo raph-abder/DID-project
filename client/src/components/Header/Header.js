@@ -2,15 +2,21 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './Header.css';
 
-const Header = () => {
+const Header = ({ web3State }) => {
   const location = useLocation();
+  const { isConnected, isLoading, account } = web3State;
 
-  const navItems = [
-    { path: '/', label: 'Home' },
-    { path: '/create', label: 'Create DID' },
-    { path: '/lookup', label: 'Lookup DID' },
-    { path: '/manage', label: 'Manage DID' }
+  const disconnectedNavItems = [
+    { path: '/', label: 'Home' }
   ];
+
+  const connectedNavItems = [
+    { path: '/manage', label: 'Manage your DID' },
+    { path: '/issue', label: 'Issue Verifiable Credential' },
+    { path: '/verify', label: 'Verify Verifiable Credential' }
+  ];
+
+  const navItems = (isConnected && account && !isLoading) ? connectedNavItems : disconnectedNavItems;
 
   return (
     <header className="header">
