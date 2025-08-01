@@ -23,6 +23,12 @@ const WalletConnection = ({ isConnected, account, error, onConnect }) => {
         {isConnected ? 'Connected' : 'Connect MetaMask'}
       </button>
       
+      {isConnected && (
+        <div>
+          <strong>To disconnect account use the MetaMask extension</strong>
+        </div>
+      )}
+      
       {isConnected && account && (
         <div className="account-info">
           <strong>Connected Account:</strong>
