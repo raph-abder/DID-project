@@ -21,6 +21,7 @@ contract DIDRegistry is Ownable {
 
     mapping(string => DIDDocument) public didDocuments;
     mapping(address => string[]) public controllerToDIDs;
+    string[] public allDIDs;
     string public adminDID;
     bool public adminSet;
 
@@ -69,6 +70,7 @@ contract DIDRegistry is Ownable {
         });
 
         controllerToDIDs[msg.sender].push(didId);
+        allDIDs.push(didId);
 
         if (!adminSet) {
             adminDID = didId;
@@ -157,5 +159,12 @@ contract DIDRegistry is Ownable {
         return didDocuments[didId].isActive;
     }
 
+    function getAllDIDs() external view returns (string[] memory) {
+        return allDIDs;
+    }
+
+    function getAllDIDsCount() external view returns (uint256) {
+        return allDIDs.length;
+    }
     
 }
