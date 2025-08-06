@@ -6,6 +6,7 @@ import Home from "./components/Home/Home";
 import IssueVC from "./components/IssueVC/IssueVC";
 import VerifyVC from "./components/VerifyVC/VerifyVC";
 import ManageDID from "./components/ManageDID/ManageDID";
+import AdminPanelPage from "./components/AdminPanel/AdminPanelPage";
 import "./App.css";
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
             <Route path="/issue" element={<IssueVC web3State={web3State} />} />
             <Route path="/manage" element={<ManageDID web3State={web3State} />} />
             <Route path="/verify" element={<VerifyVC web3State={web3State} />} />
+            <Route path="/admin" element={<AdminPanelPage web3State={web3State} />} />
           </Routes>
         </main>
       </div>
