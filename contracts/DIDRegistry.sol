@@ -16,23 +16,35 @@ contract DIDRegistry is Ownable {
         uint256 created;
         uint256 updated;
         bool isActive;
+        bool isTrustedIssuer;
     }
 
     mapping(string => DIDDocument) public didDocuments;
     mapping(address => string[]) public controllerToDIDs;
-    mapping(string => bool) public trustedIssuers;
+    string public adminDID;
+    bool public adminSet;
 
     event DIDCreated(string indexed didId, address indexed controller, string publicKey);
     event DIDUpdated(string indexed didId);
     event DIDDeactivated(string indexed didId);
     event TrustedIssuerAdded(string indexed issuerDID);
     event TrustedIssuerRemoved(string indexed issuerDID);
+    event AdminDIDSet(string indexed adminDID);
 
-    constructor() Ownable(msg.sender) {}
+    constructor() Ownable(msg.sender) {
+        adminSet = false;
+    }
 
     modifier onlyDIDController(string memory didId) {
         require(didDocuments[didId].controller == msg.sender, "Not DID controller");
         require(didDocuments[didId].isActive, "DID not active");
+        _;
+    }
+
+    modifier onlyAdmin() {
+        require(adminSet, "Admin DID not set");
+        require(didDocuments[adminDID].controller == msg.sender, "Not admin");
+        require(didDocuments[adminDID].isActive, "Admin DID not active");
         _;
     }
 
@@ -52,10 +64,17 @@ contract DIDRegistry is Ownable {
             publicKey: publicKey,
             created: block.timestamp,
             updated: block.timestamp,
-            isActive: true
+            isActive: true,
+            isTrustedIssuer: false
         });
 
         controllerToDIDs[msg.sender].push(didId);
+
+        if (!adminSet) {
+            adminDID = didId;
+            adminSet = true;
+            emit AdminDIDSet(didId);
+        }
 
         emit DIDCreated(didId, msg.sender, publicKey);
     }
@@ -70,20 +89,31 @@ contract DIDRegistry is Ownable {
     }
 
     function deactivateDID(string memory didId) external onlyDIDController(didId) {
+        require(keccak256(bytes(didId)) != keccak256(bytes(adminDID)), "Cannot deactivate admin DID");
+        
+        require(!didDocuments[didId].isTrustedIssuer, "Cannot deactivate trusted issuer");
+        
         didDocuments[didId].isActive = false;
         didDocuments[didId].updated = block.timestamp;
         emit DIDDeactivated(didId);
     }
 
-    function addTrustedIssuer(string memory issuerDID) external onlyOwner {
+    function addTrustedIssuer(string memory issuerDID) external onlyAdmin {
         require(didDocuments[issuerDID].isActive, "Issuer DID not active");
-        require(!trustedIssuers[issuerDID], "Issuer already trusted");
-        trustedIssuers[issuerDID] = true;
+        require(!didDocuments[issuerDID].isTrustedIssuer, "Issuer already trusted");
+        
+        didDocuments[issuerDID].isTrustedIssuer = true;
+        didDocuments[issuerDID].updated = block.timestamp;
+        
         emit TrustedIssuerAdded(issuerDID);
     }
 
-    function removeTrustedIssuer(string memory issuerDID) external onlyOwner {
-        trustedIssuers[issuerDID] = false;
+    function removeTrustedIssuer(string memory issuerDID) external onlyAdmin {
+        require(didDocuments[issuerDID].isTrustedIssuer, "Issuer not trusted");
+        
+        didDocuments[issuerDID].isTrustedIssuer = false;
+        didDocuments[issuerDID].updated = block.timestamp;
+        
         emit TrustedIssuerRemoved(issuerDID);
     }
 
@@ -112,7 +142,11 @@ contract DIDRegistry is Ownable {
     }
 
     function isTrustedIssuer(string memory didId) external view returns (bool) {
-        return trustedIssuers[didId] && didDocuments[didId].isActive;
+        return didDocuments[didId].isTrustedIssuer && didDocuments[didId].isActive;
+    }
+
+    function isAdminDID(string memory didId) external view returns (bool) {
+        return keccak256(bytes(didId)) == keccak256(bytes(adminDID));
     }
 
     function getDIDsByController(address controller) external view returns (string[] memory) {
