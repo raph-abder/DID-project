@@ -1,110 +1,201 @@
-import React, { useState } from 'react';
-import { useWeb3 } from '../../hooks/useWeb3';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useContract } from '../../hooks/useContract';
-import { validateDIDId, validateEthereumAddress } from '../../utils/validation';
+import { validateDIDId } from '../../utils/validation';
 import WalletConnection from '../WalletConnection/WalletConnection';
 import ContractSetup from '../ContractSetup/ContractSetup';
 import ResultDisplay from '../ResultDisplay/ResultDisplay';
+import './ManageDID.css';
 
-const ManageDID = () => {
-  const { web3, account, isConnected, error: web3Error, connectWallet } = useWeb3();
+const ManageDID = ({ web3State }) => {
+  const { web3, account, isConnected, isLoading: web3Loading, error: web3Error, connectWallet } = web3State;
   const { contract, contractAddress, error: contractError, setContract } = useContract(web3);
   
-  const [deactivateDidId, setDeactivateDidId] = useState('');
-  const [ownerAddress, setOwnerAddress] = useState('');
+  const [dids, setDids] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [didToDeactivate, setDidToDeactivate] = useState(null);
   const [isDeactivating, setIsDeactivating] = useState(false);
-  const [isLookingUp, setIsLookingUp] = useState(false);
-  const [deactivateResult, setDeactivateResult] = useState(null);
-  const [lookupResult, setLookupResult] = useState(null);
+  
+  // Create DID states
+  const [didId, setDidId] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [createResult, setCreateResult] = useState(null);
 
-  const handleDeactivateDID = async (e) => {
-    e.preventDefault();
-    
-    const didError = validateDIDId(deactivateDidId);
-    if (didError) {
-      setDeactivateResult({ type: 'error', message: didError });
-      return;
-    }
+  const loadUserDIDs = useCallback(async () => {
+    if (!contract || !account) return;
 
-    if (!contract || !account) {
-      setDeactivateResult({ 
-        type: 'error', 
-        message: 'Please connect wallet and set contract first' 
-      });
-      return;
-    }
-
-    setIsDeactivating(true);
-    setDeactivateResult(null);
+    setIsLoading(true);
+    setError(null);
 
     try {
-      const tx = await contract.methods
-        .deactivateDID(deactivateDidId)
+      const didIds = await contract.methods.getDIDsByController(account).call();
+      
+      if (didIds && didIds.length > 0) {
+        const didDetails = await Promise.all(
+          didIds.map(async (didId) => {
+            try {
+              const didData = await contract.methods.getDIDDocument(didId).call();
+              return {
+                id: didId,
+                controller: didData.controller,
+                publicKey: didData.publicKey,
+                isActive: didData.isActive,
+                createdAt: new Date(parseInt(didData.created) * 1000).toLocaleDateString(),
+                updatedAt: new Date(parseInt(didData.updated) * 1000).toLocaleDateString()
+              };
+            } catch (error) {
+              console.error(`Error loading DID ${didId}:`, error);
+              return {
+                id: didId,
+                controller: account,
+                publicKey: 'Error loading',
+                isActive: false,
+                createdAt: 'Unknown',
+                updatedAt: 'Unknown'
+              };
+            }
+          })
+        );
+        
+        const sortedDids = didDetails.sort((a, b) => {
+          if (a.isActive && !b.isActive) return -1;
+          if (!a.isActive && b.isActive) return 1;
+          return 0;
+        });
+        
+        setDids(sortedDids);
+      } else {
+        setDids([]);
+      }
+    } catch (error) {
+      setError('Error loading DIDs: ' + error.message);
+      console.error('Error loading DIDs:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [contract, account]);
+
+  useEffect(() => {
+    if (contract && account) {
+      loadUserDIDs();
+    }
+  }, [contract, account, loadUserDIDs]);
+
+  // If web3 is still loading, show loading
+  if (web3Loading) {
+    return (
+      <div className="page-container">
+        <h1 className="page-title">Manage your DID</h1>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  // If wallet is not connected, redirect to home
+  if (!isConnected) {
+    return <Navigate to="/" replace />;
+  }
+
+  const handleDeactivateClick = (did) => {
+    setDidToDeactivate(did);
+    setShowDeactivateModal(true);
+  };
+
+  const handleDeactivateConfirm = async () => {
+    if (!didToDeactivate || !contract || !account) return;
+
+    setIsDeactivating(true);
+
+    try {
+      await contract.methods
+        .deactivateDID(didToDeactivate.id)
         .send({ from: account });
         
-      setDeactivateResult({
-        type: 'success',
-        message: `DID deactivated successfully!\nTransaction hash: ${tx.transactionHash}`
-      });
-      
-      setDeactivateDidId('');
+      await loadUserDIDs();
+      setShowDeactivateModal(false);
+      setDidToDeactivate(null);
     } catch (error) {
-      setDeactivateResult({ 
-        type: 'error', 
-        message: 'Error deactivating DID: ' + error.message 
-      });
+      setError('Error deactivating DID: ' + error.message);
     } finally {
       setIsDeactivating(false);
     }
   };
 
-  const handleFindDIDByOwner = async (e) => {
-    e.preventDefault();
-    
-    const addressError = validateEthereumAddress(ownerAddress);
-    if (addressError) {
-      setLookupResult({ type: 'error', message: addressError });
-      return;
-    }
+  const handleDeactivateCancel = () => {
+    setShowDeactivateModal(false);
+    setDidToDeactivate(null);
+  };
 
-    if (!contract) {
-      setLookupResult({ 
-        type: 'error', 
-        message: 'Please connect wallet and set contract first' 
+  const handleCreateDID = async (e) => {
+    e.preventDefault();
+
+    const didError = validateDIDId(didId);
+    if (didError) {
+      setCreateResult({
+        type: 'error',
+        message: didError,
       });
       return;
     }
 
-    setIsLookingUp(true);
-    setLookupResult(null);
+    if (!contract || !account) {
+      setCreateResult({
+        type: 'error',
+        message: 'Please connect wallet and set contract first',
+      });
+      return;
+    }
+
+    setIsCreating(true);
+    setCreateResult(null);
 
     try {
-      const didIds = await contract.methods.getDIDsByController(ownerAddress).call();
+      // Use the wallet address as the public key since we don't want user input
+      const tx = await contract.methods
+        .createDID(didId, account)
+        .send({ from: account });
+
+      setCreateResult({
+        type: 'success',
+        message: `DID created successfully!\nTransaction hash: ${tx.transactionHash}\nDID ID: ${didId}`,
+      });
+
+      setDidId('');
+      await loadUserDIDs(); // Refresh the table
+    } catch (err) {
+      console.error('Full RPC error creating DID:', err);
+
+      let reason = 'Unknown error';
       
-      if (didIds && didIds.length > 0) {
-        setLookupResult({
-          type: 'success',
-          message: `Found ${didIds.length} DID(s) for controller ${ownerAddress}: ${didIds.join(', ')}`
-        });
-      } else {
-        setLookupResult({
-          type: 'error',
-          message: `No DIDs found for controller ${ownerAddress}`
-        });
+      if (err?.data?.message) {
+        reason = err.data.message;
+      } else if (err?.message) {
+        reason = err.message;
+      } else if (err?.reason) {
+        reason = err.reason;
+      } else if (err?.error?.message) {
+        reason = err.error.message;
       }
-    } catch (error) {
-      setLookupResult({ 
-        type: 'error', 
-        message: 'Error looking up DID: ' + error.message 
+
+      reason = reason
+        .replace(/^.*VM Exception while processing transaction: revert\s*/, '')
+        .replace(/^execution reverted:\s*/, '')
+        .replace(/^.*revert\s*/, '');
+      
+      setCreateResult({
+        type: 'error',
+        message: `Error creating DID: ${reason}. Please check that you have enough gas and that the DID ID is unique.`,
       });
     } finally {
-      setIsLookingUp(false);
+      setIsCreating(false);
     }
   };
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Manage DID</h1>
+      <h1 className="page-title">Manage your DID</h1>
       
       <WalletConnection 
         isConnected={isConnected}
@@ -120,63 +211,123 @@ const ManageDID = () => {
         disabled={!isConnected}
       />
       
-      <div className="grid">
+      {error && <ResultDisplay type="error" message={error} />}
+      
+      {contract && account && (
         <div className="card">
-          <h3>Deactivate DID</h3>
-          <form onSubmit={handleDeactivateDID}>
+          <h3>Create New DID</h3>
+          <form onSubmit={handleCreateDID} className="create-did-form">
             <div className="form-group">
-              <label htmlFor="deactivateDidId">DID ID:</label>
+              <label htmlFor="didId">DID ID (Username):</label>
               <input
                 type="text"
-                id="deactivateDidId"
-                value={deactivateDidId}
-                onChange={(e) => setDeactivateDidId(e.target.value)}
-                placeholder="Enter DID ID to deactivate"
-                disabled={!contract || isDeactivating}
+                id="didId"
+                value={didId}
+                onChange={(e) => setDidId(e.target.value)}
+                placeholder="Enter unique DID identifier (e.g., did:example:username)"
+                disabled={!contract || isCreating}
               />
             </div>
-            
-            <button 
-              type="submit" 
-              disabled={!contract || isDeactivating}
-            >
-              {isDeactivating ? 'Deactivating...' : 'Deactivate DID'}
+            <button type="submit" disabled={!contract || isCreating} className="create-btn">
+              {isCreating ? 'Creating DID...' : 'Create DID'}
             </button>
           </form>
           
-          {deactivateResult && (
-            <ResultDisplay type={deactivateResult.type} message={deactivateResult.message} />
+          {createResult && (
+            <ResultDisplay type={createResult.type} message={createResult.message} />
           )}
         </div>
+      )}
 
+      {contract && account && (
         <div className="card">
-          <h3>Find DIDs by Controller</h3>
-          <form onSubmit={handleFindDIDByOwner}>
-            <div className="form-group">
-              <label htmlFor="ownerAddress">Controller Address:</label>
-              <input
-                type="text"
-                id="ownerAddress"
-                value={ownerAddress}
-                onChange={(e) => setOwnerAddress(e.target.value)}
-                placeholder="0x..."
-                disabled={!contract || isLookingUp}
-              />
-            </div>
-            
+          <div className="did-table-header">
+            <h3>Your DIDs</h3>
             <button 
-              type="submit" 
-              disabled={!contract || isLookingUp}
+              onClick={loadUserDIDs} 
+              disabled={isLoading}
+              className="refresh-btn"
             >
-              {isLookingUp ? 'Searching...' : 'Find DIDs'}
+              {isLoading ? 'Refreshing...' : 'Refresh'}
             </button>
-          </form>
+          </div>
           
-          {lookupResult && (
-            <ResultDisplay type={lookupResult.type} message={lookupResult.message} />
+          {isLoading ? (
+            <p className="loading-text">Loading your DIDs...</p>
+          ) : dids.length === 0 ? (
+            <p className="no-dids-text">No DIDs found for your wallet address. Create your first DID using the Create DID page.</p>
+          ) : (
+            <div className="table-container">
+              <table className="did-table">
+                <thead>
+                  <tr>
+                    <th>DID ID</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Public Key</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dids.map((did) => (
+                    <tr key={did.id}>
+                      <td className="did-id">{did.id}</td>
+                      <td>
+                        <span className={`status-badge ${did.isActive ? 'active' : 'inactive'}`}>
+                          {did.isActive ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </td>
+                      <td>{did.createdAt}</td>
+                      <td className="public-key-cell">{did.publicKey}</td>
+                      <td>
+                        {did.isActive ? (
+                          <button 
+                            onClick={() => handleDeactivateClick(did)}
+                            className="deactivate-btn"
+                          >
+                            Deactivate
+                          </button>
+                        ) : (
+                          <span className="cannot-reactivate">Cannot reactivate</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
-      </div>
+      )}
+
+      {showDeactivateModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 className="modal-title">⚠️ Deactivate DID</h3>
+            <p>Are you sure you want to deactivate DID: <strong>{didToDeactivate?.id}</strong>?</p>
+            <p className="warning-text">
+              Warning: Once a DID is deactivated, it cannot be reactivated. This action is permanent and irreversible.
+            </p>
+            
+            <div className="modal-actions">
+              <button 
+                onClick={handleDeactivateCancel}
+                disabled={isDeactivating}
+                className="cancel-btn"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDeactivateConfirm}
+                disabled={isDeactivating}
+                className="confirm-btn"
+              >
+                {isDeactivating ? 'Deactivating...' : 'Yes, Deactivate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
