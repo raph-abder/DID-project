@@ -9,7 +9,15 @@ import './ManageDID.css';
 
 const ManageDID = ({ web3State }) => {
   const { web3, account, isConnected, isLoading: web3Loading, error: web3Error, connectWallet } = web3State;
-  const { contract, contractAddress, error: contractError, setContract } = useContract(web3);
+  const { 
+    contract, 
+    contractAddress, 
+    error: contractError, 
+    setContract,
+    checkIsTrustedIssuer,
+    checkIsAdmin,
+    getAdminDID
+  } = useContract(web3);
   
   const [dids, setDids] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -18,7 +26,6 @@ const ManageDID = ({ web3State }) => {
   const [didToDeactivate, setDidToDeactivate] = useState(null);
   const [isDeactivating, setIsDeactivating] = useState(false);
   
-  // Create DID states
   const [didId, setDidId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [createResult, setCreateResult] = useState(null);
@@ -37,11 +44,16 @@ const ManageDID = ({ web3State }) => {
           didIds.map(async (didId) => {
             try {
               const didData = await contract.methods.getDIDDocument(didId).call();
+              const isTrusted = await checkIsTrustedIssuer(didId);
+              const isAdmin = await checkIsAdmin(didId);
+              
               return {
                 id: didId,
                 controller: didData.controller,
                 publicKey: didData.publicKey,
                 isActive: didData.isActive,
+                isTrustedIssuer: isTrusted,
+                isAdmin: isAdmin,
                 createdAt: new Date(parseInt(didData.created) * 1000).toLocaleDateString(),
                 updatedAt: new Date(parseInt(didData.updated) * 1000).toLocaleDateString()
               };
@@ -52,6 +64,8 @@ const ManageDID = ({ web3State }) => {
                 controller: account,
                 publicKey: 'Error loading',
                 isActive: false,
+                isTrustedIssuer: false,
+                isAdmin: false,
                 createdAt: 'Unknown',
                 updatedAt: 'Unknown'
               };
@@ -83,7 +97,6 @@ const ManageDID = ({ web3State }) => {
     }
   }, [contract, account, loadUserDIDs]);
 
-  // If web3 is still loading, show loading
   if (web3Loading) {
     return (
       <div className="page-container">
@@ -93,7 +106,6 @@ const ManageDID = ({ web3State }) => {
     );
   }
 
-  // If wallet is not connected, redirect to home
   if (!isConnected) {
     return <Navigate to="/" replace />;
   }
@@ -152,7 +164,6 @@ const ManageDID = ({ web3State }) => {
     setCreateResult(null);
 
     try {
-      // Use the wallet address as the public key since we don't want user input
       const tx = await contract.methods
         .createDID(didId, account)
         .send({ from: account });
@@ -163,7 +174,7 @@ const ManageDID = ({ web3State }) => {
       });
 
       setDidId('');
-      await loadUserDIDs(); // Refresh the table
+      await loadUserDIDs();
     } catch (err) {
       console.error('Full RPC error creating DID:', err);
 
@@ -263,36 +274,58 @@ const ManageDID = ({ web3State }) => {
                   <tr>
                     <th>DID ID</th>
                     <th>Status</th>
+                    <th>Role</th>
                     <th>Created</th>
                     <th>Public Key</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {dids.map((did) => (
-                    <tr key={did.id}>
-                      <td className="did-id">{did.id}</td>
-                      <td>
-                        <span className={`status-badge ${did.isActive ? 'active' : 'inactive'}`}>
-                          {did.isActive ? 'ACTIVE' : 'INACTIVE'}
-                        </span>
-                      </td>
-                      <td>{did.createdAt}</td>
-                      <td className="public-key-cell">{did.publicKey}</td>
-                      <td>
-                        {did.isActive ? (
-                          <button 
-                            onClick={() => handleDeactivateClick(did)}
-                            className="deactivate-btn"
-                          >
-                            Deactivate
-                          </button>
-                        ) : (
-                          <span className="cannot-reactivate">Cannot reactivate</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {dids.map((did) => {
+                    const canDeactivate = did.isActive && !did.isTrustedIssuer && !did.isAdmin;
+                    
+                    return (
+                      <tr key={did.id}>
+                        <td className="did-id">{did.id}</td>
+                        <td>
+                          <span className={`status-badge ${did.isActive ? 'active' : 'inactive'}`}>
+                            {did.isActive ? 'ACTIVE' : 'INACTIVE'}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="role-badges">
+                            {did.isAdmin && <span className="role-badge admin">ADMIN</span>}
+                            {did.isTrustedIssuer && <span className="role-badge trusted">TRUSTED ISSUER</span>}
+                            {!did.isAdmin && !did.isTrustedIssuer && <span className="role-badge regular">REGULAR</span>}
+                          </div>
+                        </td>
+                        <td>{did.createdAt}</td>
+                        <td className="public-key-cell">{did.publicKey}</td>
+                        <td>
+                          {did.isActive ? (
+                            canDeactivate ? (
+                              <button 
+                                onClick={() => handleDeactivateClick(did)}
+                                className="deactivate-btn"
+                              >
+                                Deactivate
+                              </button>
+                            ) : (
+                              <button 
+                                className="deactivate-btn disabled"
+                                disabled
+                                title={did.isAdmin ? "Admin DID cannot be deactivated" : "Trusted issuer DID cannot be deactivated"}
+                              >
+                                Protected
+                              </button>
+                            )
+                          ) : (
+                            <span className="cannot-reactivate">Cannot reactivate</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -303,7 +336,7 @@ const ManageDID = ({ web3State }) => {
       {showDeactivateModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3 className="modal-title">⚠️ Deactivate DID</h3>
+            <h3 className="modal-title">Deactivate DID</h3>
             <p>Are you sure you want to deactivate DID: <strong>{didToDeactivate?.id}</strong>?</p>
             <p className="warning-text">
               Warning: Once a DID is deactivated, it cannot be reactivated. This action is permanent and irreversible.

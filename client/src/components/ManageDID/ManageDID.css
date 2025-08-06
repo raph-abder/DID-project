@@ -136,6 +136,46 @@
   background-color: #c82333;
 }
 
+.deactivate-btn.disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.deactivate-btn.disabled:hover {
+  background-color: #6c757d;
+}
+
+.role-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.role-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.role-badge.admin {
+  background-color: #fd7e14;
+  color: white;
+}
+
+.role-badge.trusted {
+  background-color: #20c997;
+  color: white;
+}
+
+.role-badge.regular {
+  background-color: #6c757d;
+  color: white;
+}
+
 .cannot-reactivate {
   color: #6c757d;
   font-size: 12px;
