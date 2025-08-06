@@ -1,0 +1,354 @@
+.admin-panel {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.admin-panel h2 {
+  color: #333;
+  margin-bottom: 15px;
+  font-size: 28px;
+}
+
+.admin-status {
+  color: #28a745;
+  font-weight: bold;
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.no-admin {
+  color: #dc3545;
+  font-weight: bold;
+  margin: 10px 0;
+  font-size: 16px;
+  text-align: center;
+  padding: 40px;
+  background-color: #fff;
+  border-radius: 8px;
+}
+
+.admin-did, .admin-info {
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.admin-did code, .admin-info code {
+  background-color: #e9ecef;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.did-management {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.management-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.management-header h3 {
+  color: #495057;
+  margin: 0;
+  font-size: 22px;
+}
+
+.refresh-btn {
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.refresh-btn:hover {
+  background-color: #0056b3;
+}
+
+.refresh-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.search-container {
+  margin-bottom: 20px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  font-size: 16px;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.loading-text {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 40px;
+}
+
+.no-results {
+  text-align: center;
+  color: #6c757d;
+  padding: 40px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  font-style: italic;
+}
+
+.did-list-container {
+  max-height: 600px;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background-color: #fff;
+}
+
+.did-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.did-item {
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+  background-color: #fff;
+  transition: background-color 0.2s;
+}
+
+.did-item:hover {
+  background-color: #f8f9fa;
+}
+
+.did-item:last-child {
+  border-bottom: none;
+}
+
+.did-item.inactive {
+  opacity: 0.7;
+  background-color: #f1f3f4;
+}
+
+.did-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.did-id {
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: bold;
+  color: #495057;
+  word-break: break-all;
+  flex: 1;
+  margin-right: 15px;
+}
+
+.role-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.role-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.role-badge.admin {
+  background-color: #fd7e14;
+  color: white;
+}
+
+.role-badge.trusted {
+  background-color: #20c997;
+  color: white;
+}
+
+.role-badge.regular {
+  background-color: #6c757d;
+  color: white;
+}
+
+.did-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.status-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  margin-left: 5px;
+}
+
+.status-badge.active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge.inactive {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.did-item-details {
+  font-size: 13px;
+  color: #6c757d;
+  flex: 1;
+}
+
+.did-item-details p {
+  margin: 2px 0;
+}
+
+.controller {
+  font-family: monospace;
+}
+
+.did-actions {
+  display: flex;
+  align-items: center;
+  margin-left: 15px;
+}
+
+.action-btn-small {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.action-btn-small.add {
+  background-color: #28a745;
+  color: white;
+}
+
+.action-btn-small.add:hover {
+  background-color: #218838;
+}
+
+.action-btn-small.remove {
+  background-color: #dc3545;
+  color: white;
+}
+
+.action-btn-small.remove:hover {
+  background-color: #c82333;
+}
+
+.action-btn-small:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.admin-notice-small,
+.inactive-notice-small {
+  font-size: 11px;
+  font-weight: bold;
+  color: #856404;
+  background-color: #fff3cd;
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid #ffeaa7;
+  white-space: nowrap;
+}
+
+
+.result {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.result.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.result.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .admin-panel {
+    margin: 10px;
+    padding: 15px;
+  }
+  
+  .management-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .did-item-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .role-badges {
+    align-items: flex-start;
+  }
+  
+  .did-item-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .did-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .action-btn-small {
+    width: 100%;
+  }
+  
+  .did-list-container {
+    max-height: 500px;
+  }
+}
