@@ -18,7 +18,6 @@ const ManageDID = ({ web3State }) => {
     setContract,
     checkIsTrustedIssuer,
     checkIsAdmin,
-    getAdminDID
   } = useContract(web3);
   
   const [dids, setDids] = useState([]);
@@ -110,7 +109,7 @@ const ManageDID = ({ web3State }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [contract, account]);
+  }, [contract, account, checkIsTrustedIssuer, checkIsAdmin]);
 
   useEffect(() => {
     if (contract && account) {
@@ -195,9 +194,26 @@ const ManageDID = ({ web3State }) => {
     setCreateResult(null);
 
     try {
+      const { VCEncryption } = await import('../../utils/vcEncryption');
+      
+      const keyPair = await VCEncryption.generateKeyPair();
+      const publicKeyPem = await VCEncryption.exportPublicKey(keyPair.publicKey);
+      const privateKeyPem = await VCEncryption.exportPrivateKey(keyPair.privateKey);
+      
       const tx = await contract.methods
-        .createDID(didId, account)
+        .createDID(didId, publicKeyPem)
         .send({ from: account });
+      
+      try {
+        const existingKeys = JSON.parse(localStorage.getItem('didPrivateKeys') || '{}');
+        existingKeys[didId] = {
+          privateKey: privateKeyPem,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('didPrivateKeys', JSON.stringify(existingKeys));
+      } catch (error) {
+        console.error('Error storing private key locally:', error);
+      }
 
       setCreateResult({
         type: 'success',
