@@ -324,7 +324,6 @@ const ManageDID = ({ web3State }) => {
                     <th>Role</th>
                     <th>VCs</th>
                     <th>Created</th>
-                    <th>Public Key</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -363,7 +362,6 @@ const ManageDID = ({ web3State }) => {
                           </span>
                         </td>
                         <td>{did.createdAt}</td>
-                        <td className="public-key-cell">{did.publicKey}</td>
                         <td>
                           {did.isActive ? (
                             canDeactivate ? (
