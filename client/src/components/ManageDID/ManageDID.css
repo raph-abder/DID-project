@@ -65,12 +65,16 @@
 
 .table-container {
   overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
 }
 
 .did-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 10px;
+  margin: 0;
+  background-color: white;
 }
 
 .did-table thead tr {
@@ -82,11 +86,28 @@
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+
+.did-table tr {
+  transition: background-color 0.2s ease;
+}
+
+.did-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.did-table tbody tr:hover .did-link {
+  background-color: transparent;
 }
 
 .did-table th {
   font-weight: 600;
   background-color: #f8f9fa;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .did-id {
@@ -114,7 +135,7 @@
 }
 
 .public-key-cell {
-  max-width: 200px;
+  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -174,6 +195,54 @@
 .role-badge.regular {
   background-color: #6c757d;
   color: white;
+}
+
+.did-link {
+  background: none;
+  border: none;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  padding: 4px 0;
+  word-break: break-all;
+  text-align: left;
+  width: 100%;
+  display: inline-block;
+  transition: color 0.2s ease;
+}
+
+.did-link:hover {
+  color: #0056b3;
+  text-decoration: none;
+  background-color: transparent;
+}
+
+.vc-count {
+  text-align: center;
+  min-width: 80px;
+  white-space: nowrap;
+}
+
+
+.vc-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.vc-badge.has-vcs {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.vc-badge.no-vcs {
+  background-color: #f8d7da;
+  color: #721c24;
 }
 
 .cannot-reactivate {
@@ -262,6 +331,18 @@
   cursor: not-allowed;
 }
 
+@media (max-width: 1200px) {
+  .did-table th:nth-child(6),
+  .did-table td:nth-child(6) {
+    width: 15%;
+    min-width: 80px;
+  }
+  
+  .public-key-cell {
+    font-size: 10px;
+  }
+}
+
 @media (max-width: 768px) {
   .did-table-header {
     flex-direction: column;
@@ -270,11 +351,30 @@
   }
   
   .table-container {
-    overflow-x: scroll;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .did-table {
     min-width: 600px;
+    font-size: 12px;
+  }
+  
+  .did-table th,
+  .did-table td {
+    padding: 8px 6px;
+  }
+  
+  .did-table th:nth-child(1),
+  .did-table td:nth-child(1) {
+    width: 30%;
+    min-width: 100px;
+  }
+  
+  .did-table th:nth-child(6),
+  .did-table td:nth-child(6) {
+    width: 20%;
+    min-width: 70px;
   }
   
   .modal-content {

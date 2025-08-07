@@ -2,9 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useContract } from '../../hooks/useContract';
 import { validateDIDId } from '../../utils/validation';
+import { ipfsService } from '../../utils/ipfsService';
 import WalletConnection from '../WalletConnection/WalletConnection';
 import ContractSetup from '../ContractSetup/ContractSetup';
 import ResultDisplay from '../ResultDisplay/ResultDisplay';
+import VCListModal from '../VCList/VCListModal';
 import './ManageDID.css';
 
 const ManageDID = ({ web3State }) => {
@@ -25,6 +27,10 @@ const ManageDID = ({ web3State }) => {
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [didToDeactivate, setDidToDeactivate] = useState(null);
   const [isDeactivating, setIsDeactivating] = useState(false);
+  
+  const [showVCModal, setShowVCModal] = useState(false);
+  const [selectedDIDForVCs, setSelectedDIDForVCs] = useState(null);
+  const [vcCounts, setVcCounts] = useState({});
   
   const [didId, setDidId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -80,8 +86,23 @@ const ManageDID = ({ web3State }) => {
         });
         
         setDids(sortedDids);
+        
+        const counts = {};
+        await Promise.all(
+          sortedDids.map(async (did) => {
+            try {
+              const vcRefs = ipfsService.getVCReferences(did.id);
+              counts[did.id] = vcRefs.length;
+            } catch (error) {
+              console.error(`Error loading VC count for ${did.id}:`, error);
+              counts[did.id] = 0;
+            }
+          })
+        );
+        setVcCounts(counts);
       } else {
         setDids([]);
+        setVcCounts({});
       }
     } catch (error) {
       setError('Error loading DIDs: ' + error.message);
@@ -138,6 +159,16 @@ const ManageDID = ({ web3State }) => {
   const handleDeactivateCancel = () => {
     setShowDeactivateModal(false);
     setDidToDeactivate(null);
+  };
+
+  const handleViewVCs = (did) => {
+    setSelectedDIDForVCs(did);
+    setShowVCModal(true);
+  };
+
+  const handleCloseVCModal = () => {
+    setShowVCModal(false);
+    setSelectedDIDForVCs(null);
   };
 
   const handleCreateDID = async (e) => {
@@ -275,6 +306,7 @@ const ManageDID = ({ web3State }) => {
                     <th>DID ID</th>
                     <th>Status</th>
                     <th>Role</th>
+                    <th>VCs</th>
                     <th>Created</th>
                     <th>Public Key</th>
                     <th>Actions</th>
@@ -284,9 +316,19 @@ const ManageDID = ({ web3State }) => {
                   {dids.map((did) => {
                     const canDeactivate = did.isActive && !did.isTrustedIssuer && !did.isAdmin;
                     
+                    const vcCount = vcCounts[did.id] || 0;
+                    
                     return (
                       <tr key={did.id}>
-                        <td className="did-id">{did.id}</td>
+                        <td className="did-id">
+                          <button 
+                            className="did-link"
+                            onClick={() => handleViewVCs(did)}
+                            title="Click to view Verifiable Credentials"
+                          >
+                            {did.id}
+                          </button>
+                        </td>
                         <td>
                           <span className={`status-badge ${did.isActive ? 'active' : 'inactive'}`}>
                             {did.isActive ? 'ACTIVE' : 'INACTIVE'}
@@ -298,6 +340,11 @@ const ManageDID = ({ web3State }) => {
                             {did.isTrustedIssuer && <span className="role-badge trusted">TRUSTED ISSUER</span>}
                             {!did.isAdmin && !did.isTrustedIssuer && <span className="role-badge regular">REGULAR</span>}
                           </div>
+                        </td>
+                        <td className="vc-count">
+                          <span className={`vc-badge ${vcCount > 0 ? 'has-vcs' : 'no-vcs'}`}>
+                            {vcCount} VC{vcCount !== 1 ? 's' : ''}
+                          </span>
                         </td>
                         <td>{did.createdAt}</td>
                         <td className="public-key-cell">{did.publicKey}</td>
@@ -360,6 +407,15 @@ const ManageDID = ({ web3State }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {showVCModal && selectedDIDForVCs && (
+        <VCListModal
+          isOpen={showVCModal}
+          onClose={handleCloseVCModal}
+          didId={selectedDIDForVCs.id}
+          web3={web3}
+        />
       )}
     </div>
   );
