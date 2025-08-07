@@ -86,7 +86,20 @@
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid #eee;
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+.did-table td:nth-child(3) {
+  text-align: left !important;
+}
+
+.did-table td:nth-child(3) .role-badge {
+  margin: 0 !important;
+  float: none !important;
+  display: inline-block !important;
+  text-align: left !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
 }
 
 .did-table tr {
@@ -167,34 +180,54 @@
   background-color: #6c757d;
 }
 
-.role-badges {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.role-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  display: inline-block;
+  min-width: 60px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.role-badge {
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: bold;
-  text-align: center;
-  white-space: nowrap;
+.role-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.5s;
+}
+
+.role-badge:hover::before {
+  left: 100%;
 }
 
 .role-badge.admin {
-  background-color: #fd7e14;
+  background: linear-gradient(135deg, #fd7e14, #e55a00);
   color: white;
+  border: 1px solid #e55a00;
 }
 
 .role-badge.trusted {
-  background-color: #20c997;
+  background: linear-gradient(135deg, #20c997, #17a085);
   color: white;
+  border: 1px solid #17a085;
 }
 
 .role-badge.regular {
-  background-color: #6c757d;
+  background: linear-gradient(135deg, #6c757d, #545b62);
   color: white;
+  border: 1px solid #545b62;
 }
 
 .did-link {
