@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useWeb3 } from "../../hooks/useWeb3";
 import { useContract } from "../../hooks/useContract";
-import { validateDIDId, validatePublicKey } from "../../utils/validation";
+import { validateDIDId } from "../../utils/validation";
+import { VCEncryption } from "../../utils/vcEncryption";
 import WalletConnection from "../WalletConnection/WalletConnection";
 import ContractSetup from "../ContractSetup/ContractSetup";
 import ResultDisplay from "../ResultDisplay/ResultDisplay";
@@ -22,7 +23,6 @@ const CreateDID = () => {
   } = useContract(web3);
 
   const [didId, setDidId] = useState("");
-  const [publicKey, setPublicKey] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -52,6 +52,19 @@ const CreateDID = () => {
     }
   };
 
+  const storePrivateKeyLocally = (didId, privateKey) => {
+    try {
+      const existingKeys = JSON.parse(localStorage.getItem('didPrivateKeys') || '{}');
+      existingKeys[didId] = {
+        privateKey: privateKey,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('didPrivateKeys', JSON.stringify(existingKeys));
+    } catch (error) {
+      console.error('Error storing private key locally:', error);
+    }
+  };
+
   React.useEffect(() => {
     if (contract && account) {
       checkExistingDID();
@@ -62,12 +75,11 @@ const CreateDID = () => {
     e.preventDefault();
 
     const didError = validateDIDId(didId);
-    const keyError = validatePublicKey(publicKey);
 
-    if (didError || keyError) {
+    if (didError) {
       setResult({
         type: "error",
-        message: didError || keyError,
+        message: didError,
       });
       return;
     }
@@ -84,17 +96,22 @@ const CreateDID = () => {
     setResult(null);
 
     try {
+      const keyPair = await VCEncryption.generateKeyPair();
+      const publicKeyPem = await VCEncryption.exportPublicKey(keyPair.publicKey);
+      const privateKeyPem = await VCEncryption.exportPrivateKey(keyPair.privateKey);
+      
       const tx = await contract.methods
-        .createDID(didId, publicKey)
+        .createDID(didId, publicKeyPem)
         .send({ from: account });
 
+      storePrivateKeyLocally(didId, privateKeyPem);
+      
       setResult({
         type: "success",
-        message: `DID created successfully!\nTransaction hash: ${tx.transactionHash}\nusername (DID ID): ${didId}`,
+        message: `DID created successfully!\nTransaction hash: ${tx.transactionHash}\nusername (DID ID): ${didId}\nEncryption keys generated and configured automatically.`,
       });
 
       setDidId("");
-      setPublicKey("");
       } catch (err) {
       console.error("Full RPC error creating DID:", err);
 
@@ -164,18 +181,6 @@ const CreateDID = () => {
               value={didId}
               onChange={(e) => setDidId(e.target.value)}
               placeholder="Enter unique DID identifier (e.g., did:example:123)"
-              disabled={!contract || isLoading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="publicKey">Public Key:</label>
-            <input
-              type="text"
-              id="publicKey"
-              value={publicKey}
-              onChange={(e) => setPublicKey(e.target.value)}
-              placeholder="Enter public key"
               disabled={!contract || isLoading}
             />
           </div>
