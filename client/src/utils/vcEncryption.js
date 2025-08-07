@@ -51,11 +51,17 @@ export class VCEncryption {
   }
 
   // Using PEM format for the key management
-  static async importPublicKey(pemKey) {
+  static async importPublicKey(keyData) {
     try {
+      const cleanedKey = this.cleanAndValidatePublicKey(keyData);
+      
+      if (!cleanedKey) {
+        throw new Error('Invalid or incompatible public key format. Expected RSA public key in PEM format.');
+      }
+      
       const pemHeader = '-----BEGIN PUBLIC KEY-----';
       const pemFooter = '-----END PUBLIC KEY-----';
-      const pemContents = pemKey.substring(pemHeader.length, pemKey.length - pemFooter.length);
+      const pemContents = cleanedKey.substring(pemHeader.length, cleanedKey.length - pemFooter.length);
       const binaryDerString = window.atob(pemContents);
       const binaryDer = new Uint8Array(binaryDerString.length);
       
@@ -77,8 +83,39 @@ export class VCEncryption {
       return publicKey;
     } catch (error) {
       console.error('Error importing public key:', error);
-      throw error;
+      throw new Error(`Failed to import public key: ${error.message}. This DID may have an incompatible key format.`);
     }
+  }
+
+  // verify the format of the PEM public key
+  static cleanAndValidatePublicKey(keyData) {
+    if (!keyData || typeof keyData !== 'string') {
+      return null;
+    }
+    let cleanKey = keyData.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    if (cleanKey.includes('-----BEGIN PUBLIC KEY-----') && cleanKey.includes('-----END PUBLIC KEY-----')) {
+      const pemHeader = '-----BEGIN PUBLIC KEY-----';
+      const pemFooter = '-----END PUBLIC KEY-----';
+      
+      const startIndex = cleanKey.indexOf(pemHeader);
+      const endIndex = cleanKey.indexOf(pemFooter);
+      
+      if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
+        return null;
+      }
+      
+      const base64Content = cleanKey.substring(startIndex + pemHeader.length, endIndex)
+        .replace(/\s/g, '');
+      
+      try {
+        window.atob(base64Content);
+      } catch (e) {
+        return null;
+      }
+      
+      return `${pemHeader}\n${base64Content}\n${pemFooter}`;
+    }
+    return null;
   }
 
   static async importPrivateKey(pemKey) {
@@ -208,35 +245,6 @@ export class VCEncryption {
     }
   }
 
-  static async simpleEncrypt(data, web3, account) {
-    try {
-      const dataString = JSON.stringify(data);
-      const signature = await web3.eth.personal.sign(dataString, account, '');
-      
-      return {
-        data: btoa(dataString),
-        signature: signature,
-        account: account,
-        algorithm: 'web3-sign'
-      };
-    } catch (error) {
-      console.error('Error in simple encryption:', error);
-      throw error;
-    }
-  }
-
-  static simpleDecrypt(encryptedData) {
-    try {
-      if (encryptedData.algorithm === 'web3-sign') {
-        return JSON.parse(atob(encryptedData.data));
-      }
-      
-      throw new Error('Unknown encryption algorithm');
-    } catch (error) {
-      console.error('Error in simple decryption:', error);
-      throw error;
-    }
-  }
 
   static getPrivateKeyForDID(didId) {
     try {
@@ -252,16 +260,13 @@ export class VCEncryption {
     try {
       const privateKeyPem = this.getPrivateKeyForDID(didId);
       if (!privateKeyPem) {
-        throw new Error(`No private key found for DID: ${didId}`);
+        throw new Error(`No private key found for DID: ${didId}. Please ensure this DID was created with the current system.`);
       }
 
       const privateKey = await this.importPrivateKey(privateKeyPem);
       return await this.decryptVC(encryptedPackage, privateKey);
     } catch (error) {
       console.error('Error decrypting VC for DID:', error);
-      if (encryptedPackage.algorithm === 'web3-sign' || encryptedPackage.algorithm === 'base64') {
-        return this.simpleDecrypt(encryptedPackage);
-      }
       throw error;
     }
   }
