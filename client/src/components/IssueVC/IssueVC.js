@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useContract } from '../../hooks/useContract';
 import { useDIDData } from '../../hooks/useDIDData';
-import WalletConnection from '../WalletConnection/WalletConnection';
-import ContractSetup from '../ContractSetup/ContractSetup';
 import ResultDisplay from '../ResultDisplay/ResultDisplay';
 import IssuerCapabilityCheck from './IssuerCapabilityCheck';
 import DIDSelector from './DIDSelector';
@@ -12,12 +10,9 @@ import { createVerifiableCredential } from '../../utils/vcCreator';
 import './IssueVC.css';
 
 const IssueVC = ({ web3State }) => {
-  const { web3, account, isConnected, isLoading: web3Loading, error: web3Error, connectWallet } = web3State;
+  const { web3, account, isConnected, isLoading: web3Loading} = web3State;
   const { 
     contract, 
-    contractAddress, 
-    error: contractError, 
-    setContract,
     checkIsTrustedIssuer,
     getAllDIDs,
     getDIDDocument
