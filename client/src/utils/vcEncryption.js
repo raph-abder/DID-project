@@ -1,0 +1,268 @@
+// Used the Web Crypto API for the encryption and decryption of VCs.
+
+export class VCEncryption {
+
+  static async generateKeyPair() {
+    try {
+      const keyPair = await window.crypto.subtle.generateKey(
+        {
+          name: 'RSA-OAEP',
+          modulusLength: 2048,
+          publicExponent: new Uint8Array([1, 0, 1]),
+          hash: 'SHA-256',
+        },
+        true,
+        ['encrypt', 'decrypt']
+      );
+      
+      return keyPair;
+    } catch (error) {
+      console.error('Error generating key pair:', error);
+      throw error;
+    }
+  }
+
+  // Using PEM format for the key management
+  static async exportPublicKey(publicKey) {
+    try {
+      const exported = await window.crypto.subtle.exportKey('spki', publicKey);
+      const exportedAsString = String.fromCharCode.apply(null, new Uint8Array(exported));
+      const exportedAsBase64 = window.btoa(exportedAsString);
+      
+      return `-----BEGIN PUBLIC KEY-----\n${exportedAsBase64}\n-----END PUBLIC KEY-----`;
+    } catch (error) {
+      console.error('Error exporting public key:', error);
+      throw error;
+    }
+  }
+
+  // Using PEM format for the key management
+  static async exportPrivateKey(privateKey) {
+    try {
+      const exported = await window.crypto.subtle.exportKey('pkcs8', privateKey);
+      const exportedAsString = String.fromCharCode.apply(null, new Uint8Array(exported));
+      const exportedAsBase64 = window.btoa(exportedAsString);
+      
+      return `-----BEGIN PRIVATE KEY-----\n${exportedAsBase64}\n-----END PRIVATE KEY-----`;
+    } catch (error) {
+      console.error('Error exporting private key:', error);
+      throw error;
+    }
+  }
+
+  // Using PEM format for the key management
+  static async importPublicKey(pemKey) {
+    try {
+      const pemHeader = '-----BEGIN PUBLIC KEY-----';
+      const pemFooter = '-----END PUBLIC KEY-----';
+      const pemContents = pemKey.substring(pemHeader.length, pemKey.length - pemFooter.length);
+      const binaryDerString = window.atob(pemContents);
+      const binaryDer = new Uint8Array(binaryDerString.length);
+      
+      for (let i = 0; i < binaryDerString.length; i++) {
+        binaryDer[i] = binaryDerString.charCodeAt(i);
+      }
+      
+      const publicKey = await window.crypto.subtle.importKey(
+        'spki',
+        binaryDer.buffer,
+        {
+          name: 'RSA-OAEP',
+          hash: 'SHA-256',
+        },
+        true,
+        ['encrypt']
+      );
+      
+      return publicKey;
+    } catch (error) {
+      console.error('Error importing public key:', error);
+      throw error;
+    }
+  }
+
+  static async importPrivateKey(pemKey) {
+    try {
+      const pemHeader = '-----BEGIN PRIVATE KEY-----';
+      const pemFooter = '-----END PRIVATE KEY-----';
+      const pemContents = pemKey.substring(pemHeader.length, pemKey.length - pemFooter.length);
+      const binaryDerString = window.atob(pemContents);
+      const binaryDer = new Uint8Array(binaryDerString.length);
+      
+      for (let i = 0; i < binaryDerString.length; i++) {
+        binaryDer[i] = binaryDerString.charCodeAt(i);
+      }
+      
+      const privateKey = await window.crypto.subtle.importKey(
+        'pkcs8',
+        binaryDer.buffer,
+        {
+          name: 'RSA-OAEP',
+          hash: 'SHA-256',
+        },
+        true,
+        ['decrypt']
+      );
+      
+      return privateKey;
+    } catch (error) {
+      console.error('Error importing private key:', error);
+      throw error;
+    }
+  }
+
+
+  static async encryptVC(vc, recipientPublicKey) {
+    try {
+      const vcString = JSON.stringify(vc);
+      const encoder = new TextEncoder();
+      const data = encoder.encode(vcString);
+      
+      const aesKey = await window.crypto.subtle.generateKey(
+        {
+          name: 'AES-GCM',
+          length: 256,
+        },
+        true,
+        ['encrypt', 'decrypt']
+      );
+      
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+      const encryptedData = await window.crypto.subtle.encrypt(
+        {
+          name: 'AES-GCM',
+          iv: iv,
+        },
+        aesKey,
+        data
+      );
+
+      const exportedKey = await window.crypto.subtle.exportKey('raw', aesKey);
+      const encryptedKey = await window.crypto.subtle.encrypt(
+        {
+          name: 'RSA-OAEP',
+        },
+        recipientPublicKey,
+        exportedKey
+      );
+      
+      return {
+        encryptedData: Array.from(new Uint8Array(encryptedData)),
+        encryptedKey: Array.from(new Uint8Array(encryptedKey)),
+        iv: Array.from(iv),
+        algorithm: 'AES-GCM-RSA-OAEP'
+      };
+      
+    } catch (error) {
+      console.error('Error encrypting VC:', error);
+      return {
+        encryptedData: btoa(JSON.stringify(vc)),
+        algorithm: 'base64',
+        fallback: true
+      };
+    }
+  }
+
+  static async decryptVC(encryptedPackage, privateKey) {
+    try {
+      if (encryptedPackage.algorithm === 'base64') {
+        return JSON.parse(atob(encryptedPackage.encryptedData));
+      }
+      
+      const encryptedKey = new Uint8Array(encryptedPackage.encryptedKey);
+      const decryptedKeyBuffer = await window.crypto.subtle.decrypt(
+        {
+          name: 'RSA-OAEP',
+        },
+        privateKey,
+        encryptedKey
+      );
+      
+      const aesKey = await window.crypto.subtle.importKey(
+        'raw',
+        decryptedKeyBuffer,
+        'AES-GCM',
+        false,
+        ['decrypt']
+      );
+      
+      const iv = new Uint8Array(encryptedPackage.iv);
+      const encryptedData = new Uint8Array(encryptedPackage.encryptedData);
+      
+      const decryptedData = await window.crypto.subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv: iv,
+        },
+        aesKey,
+        encryptedData
+      );
+      
+      const decoder = new TextDecoder();
+      const vcString = decoder.decode(decryptedData);
+      return JSON.parse(vcString);
+      
+    } catch (error) {
+      console.error('Error decrypting VC:', error);
+      throw error;
+    }
+  }
+
+  static async simpleEncrypt(data, web3, account) {
+    try {
+      const dataString = JSON.stringify(data);
+      const signature = await web3.eth.personal.sign(dataString, account, '');
+      
+      return {
+        data: btoa(dataString),
+        signature: signature,
+        account: account,
+        algorithm: 'web3-sign'
+      };
+    } catch (error) {
+      console.error('Error in simple encryption:', error);
+      throw error;
+    }
+  }
+
+  static simpleDecrypt(encryptedData) {
+    try {
+      if (encryptedData.algorithm === 'web3-sign') {
+        return JSON.parse(atob(encryptedData.data));
+      }
+      
+      throw new Error('Unknown encryption algorithm');
+    } catch (error) {
+      console.error('Error in simple decryption:', error);
+      throw error;
+    }
+  }
+
+  static getPrivateKeyForDID(didId) {
+    try {
+      const storedKeys = JSON.parse(localStorage.getItem('didPrivateKeys') || '{}');
+      return storedKeys[didId]?.privateKey || null;
+    } catch (error) {
+      console.error('Error retrieving private key for DID:', error);
+      return null;
+    }
+  }
+
+  static async decryptVCForDID(encryptedPackage, didId) {
+    try {
+      const privateKeyPem = this.getPrivateKeyForDID(didId);
+      if (!privateKeyPem) {
+        throw new Error(`No private key found for DID: ${didId}`);
+      }
+
+      const privateKey = await this.importPrivateKey(privateKeyPem);
+      return await this.decryptVC(encryptedPackage, privateKey);
+    } catch (error) {
+      console.error('Error decrypting VC for DID:', error);
+      if (encryptedPackage.algorithm === 'web3-sign' || encryptedPackage.algorithm === 'base64') {
+        return this.simpleDecrypt(encryptedPackage);
+      }
+      throw error;
+    }
+  }
+}
