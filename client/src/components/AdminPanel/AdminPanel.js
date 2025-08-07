@@ -162,7 +162,7 @@ const AdminPanel = ({
   return (
     <div className="admin-panel">
       <h2>Admin Panel</h2>
-      <p className="admin-status">✅ You have admin privileges</p>
+      <p className="admin-status">You have admin privileges</p>
       <p className="admin-did">Admin DID: <code>{adminDID}</code></p>
 
       <div className="did-management">

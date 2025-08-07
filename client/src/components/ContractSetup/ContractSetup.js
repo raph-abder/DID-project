@@ -39,7 +39,7 @@ const ContractSetup = ({ contractAddress, error, onSetContract, disabled }) => {
         <div className="current-contract">
           <strong>Connected Contract Address:</strong>
           <span className="contract-address">{contractAddress}</span>
-          <div className="contract-status">✅ Automatically connected</div>
+          <div className="contract-status">Automatically connected</div>
         </div>
       ) : (
         <>
