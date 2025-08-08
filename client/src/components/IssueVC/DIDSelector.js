@@ -32,20 +32,18 @@ const DIDSelector = ({
 
       <div className="form-section">
         <div className="form-group">
-          <label htmlFor="recipientDID">Select recipient DID:</label>
-          <select
+          <label htmlFor="recipientDID">Target DID (Recipient):</label>
+          <input
+            type="text"
             id="recipientDID"
             value={selectedRecipientDID}
             onChange={(e) => onRecipientChange(e.target.value)}
+            placeholder="Enter the DID ID of the recipient"
             disabled={loading}
-          >
-            <option value="">Select a recipient DID</option>
-            {allDIDs.filter(did => did.id !== selectedIssuerDID).map(did => (
-              <option key={did.id} value={did.id}>
-                {did.id}
-              </option>
-            ))}
-          </select>
+          />
+          <p className="help-text">
+            Enter the DID ID of the person who will receive this verifiable credential
+          </p>
         </div>
       </div>
     </>
