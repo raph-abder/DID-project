@@ -1,0 +1,141 @@
+.notification-dropdown {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e1e8ed;
+  width: 400px;
+  max-height: 500px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e1e8ed;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f9fa;
+}
+
+.notification-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mark-all-read-btn {
+  background: none;
+  border: none;
+  color: #3498db;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.mark-all-read-btn:hover {
+  background: rgba(52, 152, 219, 0.1);
+}
+
+.notification-filters {
+  padding: 12px 20px;
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #e1e8ed;
+  background: #fafafa;
+}
+
+.filter-btn {
+  background: none;
+  border: 1px solid #e1e8ed;
+  color: #657786;
+  font-size: 0.875rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.filter-btn:hover {
+  background: #f1f3f4;
+}
+
+.filter-btn.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.notification-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.no-notifications {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.no-notifications p {
+  color: #657786;
+  margin: 0;
+  font-style: italic;
+}
+
+.notification-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #e1e8ed;
+  background: #f8f9fa;
+}
+
+.view-all-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-all-btn:hover {
+  background: linear-gradient(135deg, #2980b9, #3498db);
+}
+
+@media (max-width: 480px) {
+  .notification-dropdown {
+    width: 320px;
+  }
+  
+  .notification-header {
+    padding: 12px 16px;
+  }
+  
+  .notification-filters {
+    padding: 10px 16px;
+  }
+  
+  .notification-footer {
+    padding: 10px 16px;
+  }
+  
+  .filter-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+  }
+}
