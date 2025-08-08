@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useContract } from '../../hooks/useContract';
+import NotificationIcon from '../Notifications/NotificationIcon';
 import './Header.css';
 
 const Header = ({ web3State }) => {
@@ -65,6 +66,11 @@ const Header = ({ web3State }) => {
             </Link>
           ))}
         </nav>
+        <div className="header-actions">
+          {(isConnected && account && !isLoading) && (
+            <NotificationIcon web3={web3} account={account} />
+          )}
+        </div>
       </div>
     </header>
   );
