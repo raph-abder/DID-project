@@ -6,12 +6,9 @@ import ResultDisplay from '../ResultDisplay/ResultDisplay';
 import './VerifyVC.css';
 
 const VerifyVC = ({ web3State }) => {
-  const { web3, account, isConnected, isLoading: web3Loading, error: web3Error } = web3State;
+  const { web3, account, isConnected, isLoading: web3Loading } = web3State;
   const { 
-    contract, 
-    contractAddress, 
-    error: contractError, 
-    setContract 
+    contract
   } = useContract(web3);
   const { sendVerificationRequest } = useNotifications();
   
