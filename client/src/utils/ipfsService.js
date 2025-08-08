@@ -174,6 +174,19 @@ class IPFSService {
       return [];
     }
   }
+
+  async getVC(ipfsHash) {
+    try {
+      const result = await this.retrieveVC(ipfsHash);
+      if (result.success) {
+        return result.data.encryptedVC || result.data;
+      }
+      throw new Error(result.error);
+    } catch (error) {
+      console.error('Error getting VC:', error);
+      throw error;
+    }
+  }
 }
 
 export const ipfsService = new IPFSService();
