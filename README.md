@@ -88,8 +88,13 @@ For this repository, the necessary installs are the following :
 - Name the network, add the RPC URL and the chain ID then click save
 - Add an account from the Ganache network by copying the private key and adding it in Ganache
 
+### 5. Files to change
+- In the ```/client/src/constants/contracts.js``` file the use should change the contract with the contracts corresponding to the one in the Ganache like in the following image.
+![Ganache-contract-address](./images/Ganache-Contract-Address.png)
+- Then the user should also configure the Pinata IPFS network by activating the account online at https://pinata.cloud/ and add the API keys to the .env file like the following. 
+![env-file-image](./images/env-file-image.png)
 
 ## Work Flow 
 
-![DID-workflow](./images/DID-project.png)
+![DID-workflow](./images/DID-diagram.png)
 
