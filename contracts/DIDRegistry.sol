@@ -19,11 +19,29 @@ contract DIDRegistry is Ownable {
         bool isTrustedIssuer;
     }
 
+    struct AcceptanceRecord {
+        string issuerDID;
+        string recipientDID;
+        uint256 timestamp;
+    }
+
+    struct TrustMetrics {
+        uint256 totalIssued;
+        uint256 totalAccepted;
+        uint256 lastUpdated;
+        uint256 trustScore;
+    }
+
     mapping(string => DIDDocument) public didDocuments;
     mapping(address => string[]) public controllerToDIDs;
+    mapping(string => TrustMetrics) public issuerTrustMetrics;
+    mapping(string => mapping(string => uint256)) public issuerToRecipientAcceptances;
+    mapping(string => string[]) public issuerAcceptedBy;
+    
     string[] public allDIDs;
     string public adminDID;
     bool public adminSet;
+    AcceptanceRecord[] public acceptanceHistory;
 
     event DIDCreated(string indexed didId, address indexed controller, string publicKey);
     event DIDUpdated(string indexed didId);
@@ -31,6 +49,8 @@ contract DIDRegistry is Ownable {
     event TrustedIssuerAdded(string indexed issuerDID);
     event TrustedIssuerRemoved(string indexed issuerDID);
     event AdminDIDSet(string indexed adminDID);
+    event CredentialAccepted(string indexed issuerDID, string indexed recipientDID);
+    event TrustScoreUpdated(string indexed issuerDID, uint256 newTrustScore);
 
     constructor() Ownable(msg.sender) {
         adminSet = false;
@@ -165,6 +185,64 @@ contract DIDRegistry is Ownable {
 
     function getAllDIDsCount() external view returns (uint256) {
         return allDIDs.length;
+    }
+
+    function recordCredentialIssuance(string memory issuerDID, string memory recipientDID) external {
+        require(didDocuments[issuerDID].controller == msg.sender, "Not issuer DID controller");
+        require(didDocuments[issuerDID].isActive, "Issuer DID not active");
+        require(didDocuments[recipientDID].isActive, "Recipient DID not active");
+
+        issuerTrustMetrics[issuerDID].totalIssued++;
+        issuerTrustMetrics[issuerDID].lastUpdated = block.timestamp;
+    }
+
+    function recordCredentialAcceptance(string memory issuerDID, string memory recipientDID) external {
+        require(didDocuments[recipientDID].controller == msg.sender, "Not recipient DID controller");
+        require(didDocuments[issuerDID].isActive, "Issuer DID not active");
+        require(didDocuments[recipientDID].isActive, "Recipient DID not active");
+
+        if (issuerToRecipientAcceptances[issuerDID][recipientDID] == 0) {
+            issuerAcceptedBy[issuerDID].push(recipientDID);
+        }
+        
+        issuerToRecipientAcceptances[issuerDID][recipientDID]++;
+        issuerTrustMetrics[issuerDID].totalAccepted++;
+        issuerTrustMetrics[issuerDID].lastUpdated = block.timestamp;
+        
+        acceptanceHistory.push(AcceptanceRecord({
+            issuerDID: issuerDID,
+            recipientDID: recipientDID,
+            timestamp: block.timestamp
+        }));
+
+        emit CredentialAccepted(issuerDID, recipientDID);
+    }
+
+    function updateTrustScore(string memory issuerDID, uint256 newScore) external onlyAdmin {
+        issuerTrustMetrics[issuerDID].trustScore = newScore;
+        issuerTrustMetrics[issuerDID].lastUpdated = block.timestamp;
+        emit TrustScoreUpdated(issuerDID, newScore);
+    }
+
+    function getTrustMetrics(string memory issuerDID) external view returns (TrustMetrics memory) {
+        return issuerTrustMetrics[issuerDID];
+    }
+
+    function getAcceptanceCount(string memory issuerDID, string memory recipientDID) external view returns (uint256) {
+        return issuerToRecipientAcceptances[issuerDID][recipientDID];
+    }
+
+    function getAcceptedByList(string memory issuerDID) external view returns (string[] memory) {
+        return issuerAcceptedBy[issuerDID];
+    }
+
+    function getAcceptanceHistoryLength() external view returns (uint256) {
+        return acceptanceHistory.length;
+    }
+
+    function getAcceptanceRecord(uint256 index) external view returns (AcceptanceRecord memory) {
+        require(index < acceptanceHistory.length, "Index out of bounds");
+        return acceptanceHistory[index];
     }
     
 }
