@@ -8,7 +8,7 @@ const IssuerCapabilityCheck = ({ userDIDs, canIssue }) => {
       <div className="no-issuing-capability">
         <h3>Cannot Issue Credentials</h3>
         <p>
-          You need to have a <strong>Trusted Issuer</strong> DID to issue Verifiable Credentials.
+          You need to have an <strong>active DID</strong> to issue Verifiable Credentials.
         </p>
         <div className="your-dids">
           <h4>Your DIDs:</h4>
@@ -19,8 +19,8 @@ const IssuerCapabilityCheck = ({ userDIDs, canIssue }) => {
               {userDIDs.map(did => (
                 <li key={did.id} className={`did-status ${did.canIssue ? 'can-issue' : 'cannot-issue'}`}>
                   <code>{did.id}</code>
-                  <span className={`status ${did.isTrustedIssuer ? 'trusted' : 'not-trusted'}`}>
-                    {did.isTrustedIssuer ? 'Trusted Issuer' : 'Not Trusted'}
+                  <span className={`status ${did.canIssue ? 'can-issue' : 'cannot-issue'}`}>
+                    {did.canIssue ? 'Can Issue' : 'Cannot Issue'}
                   </span>
                   {!did.isActive && <span className="inactive">(Inactive)</span>}
                 </li>
@@ -29,7 +29,7 @@ const IssuerCapabilityCheck = ({ userDIDs, canIssue }) => {
           )}
         </div>
         <p className="help-text">
-          Contact the system administrator to get trusted issuer status for your DID.
+          Create an active DID to start issuing Verifiable Credentials.
         </p>
       </div>
     </div>
