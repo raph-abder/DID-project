@@ -25,7 +25,7 @@ export const useDIDData = (contract, account, getDIDDocument, checkIsTrustedIssu
                 controller: didDoc.controller,
                 isActive: didDoc.isActive,
                 isTrustedIssuer: isTrusted,
-                canIssue: didDoc.isActive && isTrusted
+                canIssue: didDoc.isActive
               };
             } catch (error) {
               console.error(`Error loading DID ${didId}:`, error);
