@@ -4,6 +4,7 @@ import { useContract } from '../../hooks/useContract';
 import { validateDIDId } from '../../utils/validation';
 import { ipfsService } from '../../utils/ipfsService';
 import { createTrustScoring } from '../../utils/trustScoring';
+import { useNotifications } from '../../contexts/NotificationContext';
 import WalletConnection from '../WalletConnection/WalletConnection';
 import ContractSetup from '../ContractSetup/ContractSetup';
 import ResultDisplay from '../ResultDisplay/ResultDisplay';
@@ -12,6 +13,7 @@ import './ManageDID.css';
 
 const ManageDID = ({ web3State }) => {
   const { web3, account, isConnected, isLoading: web3Loading, error: web3Error, connectWallet } = web3State;
+  const { trustScoresUpdated } = useNotifications();
   const { 
     contract, 
     contractAddress, 
@@ -138,6 +140,13 @@ const ManageDID = ({ web3State }) => {
       loadUserDIDs();
     }
   }, [contract, account, loadUserDIDs]);
+
+  useEffect(() => {
+    if (contract && account && trustScoresUpdated > 0) {
+      console.log('[ManageDID] Trust scores updated, reloading DIDs...');
+      loadUserDIDs();
+    }
+  }, [contract, account, trustScoresUpdated, loadUserDIDs]);
 
   if (web3Loading) {
     return (
@@ -381,7 +390,14 @@ const ManageDID = ({ web3State }) => {
                           </div>
                         </td>
                         <td className="trust-score">
-                          <span className={`trust-badge ${trustScore >= 2000 ? 'high-trust' : trustScore >= 1000 ? 'medium-trust' : 'low-trust'}`}>
+                          <span 
+                            className={`trust-badge ${trustScore >= 2000 ? 'high-trust' : trustScore >= 1000 ? 'medium-trust' : 'low-trust'}`}
+                            title={`Score Distribution:
+• 2000+ = High Trust - strong network connections
+• 1000-1999 = Medium Trust - Moderate acceptance 
+• 500-999 = Low Trust - Limited history
+• 0-499 = Very Low Trust - New or rarely accepted`}
+                          >
                             {trustScore}
                           </span>
                         </td>
