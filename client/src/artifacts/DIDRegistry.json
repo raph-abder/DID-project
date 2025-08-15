@@ -39712,12 +39712,12 @@
         }
       },
       "links": {},
-      "address": "0x047E927ACe38e9ca160e5B531C1A18643E1fBfe1",
-      "transactionHash": "0x7ac98c3e41dc3f61ce6714fe759c0daa15ae6023b3f72522fe1413936eae73ce"
+      "address": "0xB1EC5280B529D5eFa29D7a9d73c493E376320E69",
+      "transactionHash": "0x962767101a0b0744eec9ef38c477ff78c585e117383ef38916b397216bb8018d"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2025-08-14T18:59:01.058Z",
+  "updatedAt": "2025-08-15T14:15:21.429Z",
   "networkType": "ethereum",
   "devdoc": {
     "errors": {
