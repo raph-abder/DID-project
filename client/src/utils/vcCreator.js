@@ -7,7 +7,8 @@ export const createVerifiableCredential = async ({
   selectedIssuerDID,
   selectedRecipientDID,
   vcData,
-  getDIDDocument
+  getDIDDocument,
+  contract
 }) => {
   if (!selectedIssuerDID || !selectedRecipientDID || !vcData.subject) {
     throw new Error('Please fill in all required fields and select both issuer and recipient DIDs.');
@@ -72,8 +73,18 @@ export const createVerifiableCredential = async ({
     account,
     selectedRecipientDID,
     ipfsResult.ipfsHash,
-    vcData.type
+    vcData.type,
+    selectedIssuerDID
   );
+
+  if (contract) {
+    try {
+      await contract.methods.recordCredentialIssuance(selectedIssuerDID, selectedRecipientDID)
+        .send({ from: account });
+    } catch (error) {
+      console.warn('Could not record credential issuance on-chain:', error);
+    }
+  }
 
   return {
     success: true,
@@ -83,6 +94,7 @@ export const createVerifiableCredential = async ({
     originalVC: verifiableCredential,
     recipient: selectedRecipientDID,
     issuer: selectedIssuerDID,
-    timestamp: ipfsResult.timestamp
+    timestamp: ipfsResult.timestamp,
+    isSimulated: ipfsResult.isSimulated
   };
 };
