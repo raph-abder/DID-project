@@ -108,6 +108,44 @@ export const NotificationProvider = ({ children }) => {
     saveNotifications([], currentWallet);
   }, [saveNotifications, currentWallet]);
 
+  const sendCredentialOffer = useCallback(async (fromDID, toDID, credentialData, contract) => {
+    addNotification({
+      type: 'credential_offer',
+      status: 'pending',
+      fromDID: fromDID,
+      toDID: toDID,
+      credentialData: credentialData,
+      direction: 'outgoing'
+    });
+
+    try {
+      const targetDIDData = await contract.methods.getDIDDocument(toDID).call();
+      const targetWallet = targetDIDData.controller;
+      const targetStorageKey = getStorageKey(targetWallet);
+      const targetStored = localStorage.getItem(targetStorageKey);
+      const targetNotifications = targetStored ? JSON.parse(targetStored) : [];
+
+      const incomingNotification = {
+        id: Date.now() + Math.random(),
+        timestamp: Date.now(),
+        read: false,
+        type: 'credential_offer',
+        status: 'pending', 
+        fromDID: fromDID,
+        toDID: toDID,
+        credentialData: credentialData,
+        direction: 'incoming'
+      };
+
+      const updatedTargetNotifications = [incomingNotification, ...targetNotifications];
+      localStorage.setItem(targetStorageKey, JSON.stringify(updatedTargetNotifications));
+
+    } catch (error) {
+      console.error('Error sending credential offer to target wallet:', error);
+      throw new Error('Could not send credential offer to target wallet');
+    }
+  }, [addNotification, getStorageKey]);
+
   const sendVerificationRequest = useCallback(async (fromDID, toDID, message = '', contract) => {
     addNotification({
       type: 'verification_request',
@@ -146,7 +184,7 @@ export const NotificationProvider = ({ children }) => {
     }
   }, [addNotification, getStorageKey]);
 
-  const respondToRequest = useCallback(async (requestId, response, encryptedVC = null, verificationResult = null, contract) => {
+  const respondToRequest = useCallback(async (requestId, response, encryptedVC = null, verificationResult = null, contract, web3, account) => {
     setNotifications(prev => {
       const updated = prev.map(n => {
         if (n.id === requestId) {
@@ -170,7 +208,10 @@ export const NotificationProvider = ({ children }) => {
         const currentNotifications = JSON.parse(localStorage.getItem(getStorageKey(currentWallet)) || '[]');
         const originalRequest = currentNotifications.find(n => n.id === requestId);
         
-        if (originalRequest && originalRequest.fromDID) {
+        if (originalRequest && originalRequest.fromDID && originalRequest.toDID) {
+          await contract.methods.recordCredentialAcceptance(originalRequest.fromDID, originalRequest.toDID)
+            .send({ from: account });
+            
           const requesterDIDData = await contract.methods.getDIDDocument(originalRequest.fromDID).call();
           const requesterWallet = requesterDIDData.controller;
 
@@ -210,6 +251,7 @@ export const NotificationProvider = ({ children }) => {
     markAllAsRead,
     deleteNotification,
     clearAllNotifications,
+    sendCredentialOffer,
     sendVerificationRequest,
     respondToRequest,
     loadNotifications
