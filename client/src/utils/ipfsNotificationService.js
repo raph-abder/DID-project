@@ -167,7 +167,8 @@ class IPFSNotificationService {
           return this.storeNotificationFallback(recipientDID, notification);
         }
         
-        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        const delay = 1000 * retryCount;
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }

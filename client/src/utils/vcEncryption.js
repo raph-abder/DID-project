@@ -249,7 +249,24 @@ export class VCEncryption {
   static getPrivateKeyForDID(didId) {
     try {
       const storedKeys = JSON.parse(localStorage.getItem('didPrivateKeys') || '{}');
-      return storedKeys[didId]?.privateKey || null;
+      console.log('[VCEncryption] Looking for private key for DID:', didId);
+      console.log('[VCEncryption] Available DID keys:', Object.keys(storedKeys));
+      
+      if (storedKeys[didId]?.privateKey) {
+        console.log('[VCEncryption] Found exact match for DID:', didId);
+        return storedKeys[didId].privateKey;
+      }
+      
+      const lowerDid = didId.toLowerCase();
+      for (const [storedDid, keyData] of Object.entries(storedKeys)) {
+        if (storedDid.toLowerCase() === lowerDid) {
+          console.log('[VCEncryption] Found case-insensitive match:', storedDid, 'for', didId);
+          return keyData.privateKey;
+        }
+      }
+      
+      console.warn('[VCEncryption] No private key found for DID:', didId);
+      return null;
     } catch (error) {
       console.error('Error retrieving private key for DID:', error);
       return null;
@@ -260,7 +277,17 @@ export class VCEncryption {
     try {
       const privateKeyPem = this.getPrivateKeyForDID(didId);
       if (!privateKeyPem) {
-        throw new Error(`No private key found for DID: ${didId}. Please ensure this DID was created with the current system.`);
+        // Try to fallback to base64 decryption if it's an old format
+        if (encryptedPackage.algorithm === 'base64' || encryptedPackage.fallback) {
+          console.log('[VCEncryption] Attempting base64 fallback decryption for legacy VC');
+          try {
+            return JSON.parse(atob(encryptedPackage.encryptedData || encryptedPackage));
+          } catch (base64Error) {
+            console.warn('[VCEncryption] Base64 fallback failed:', base64Error);
+          }
+        }
+        
+        throw new Error(`No private key found for DID: ${didId}. Please ensure this DID was created with the current system. Available DIDs: ${Object.keys(JSON.parse(localStorage.getItem('didPrivateKeys') || '{}')).join(', ') || 'none'}`);
       }
 
       const privateKey = await this.importPrivateKey(privateKeyPem);
