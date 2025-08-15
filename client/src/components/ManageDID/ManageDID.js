@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useContract } from '../../hooks/useContract';
 import { validateDIDId } from '../../utils/validation';
 import { ipfsService } from '../../utils/ipfsService';
+import { createTrustScoring } from '../../utils/trustScoring';
 import WalletConnection from '../WalletConnection/WalletConnection';
 import ContractSetup from '../ContractSetup/ContractSetup';
 import ResultDisplay from '../ResultDisplay/ResultDisplay';
@@ -30,6 +31,7 @@ const ManageDID = ({ web3State }) => {
   const [showVCModal, setShowVCModal] = useState(false);
   const [selectedDIDForVCs, setSelectedDIDForVCs] = useState(null);
   const [vcCounts, setVcCounts] = useState({});
+  const [trustScores, setTrustScores] = useState({});
   
   const [didId, setDidId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -87,6 +89,23 @@ const ManageDID = ({ web3State }) => {
         setDids(sortedDids);
         
         const counts = {};
+        const scores = {};
+        
+        try {
+          const trustScoring = createTrustScoring(contract);
+          const allTrustScores = await trustScoring.calculateTrustScores();
+          
+          sortedDids.forEach(did => {
+            const trustData = allTrustScores.get(did.id);
+            scores[did.id] = trustData ? trustData.trustScore : 0;
+          });
+        } catch (error) {
+          console.error('Error calculating trust scores:', error);
+          sortedDids.forEach(did => {
+            scores[did.id] = 0;
+          });
+        }
+        
         await Promise.all(
           sortedDids.map(async (did) => {
             try {
@@ -98,10 +117,13 @@ const ManageDID = ({ web3State }) => {
             }
           })
         );
+        
         setVcCounts(counts);
+        setTrustScores(scores);
       } else {
         setDids([]);
         setVcCounts({});
+        setTrustScores({});
       }
     } catch (error) {
       setError('Error loading DIDs: ' + error.message);
@@ -322,6 +344,7 @@ const ManageDID = ({ web3State }) => {
                     <th>DID ID</th>
                     <th>Status</th>
                     <th>Role</th>
+                    <th>Trust Score</th>
                     <th>VCs</th>
                     <th>Created</th>
                     <th>Actions</th>
@@ -332,6 +355,7 @@ const ManageDID = ({ web3State }) => {
                     const canDeactivate = did.isActive && !did.isTrustedIssuer && !did.isAdmin;
                     
                     const vcCount = vcCounts[did.id] || 0;
+                    const trustScore = trustScores[did.id] || 0;
                     
                     return (
                       <tr key={did.id}>
@@ -355,6 +379,11 @@ const ManageDID = ({ web3State }) => {
                             {did.isTrustedIssuer && <span className="role-badge trusted">TRUSTED ISSUER</span>}
                             {!did.isAdmin && !did.isTrustedIssuer && <span className="role-badge regular">REGULAR</span>}
                           </div>
+                        </td>
+                        <td className="trust-score">
+                          <span className={`trust-badge ${trustScore >= 2000 ? 'high-trust' : trustScore >= 1000 ? 'medium-trust' : 'low-trust'}`}>
+                            {trustScore}
+                          </span>
                         </td>
                         <td className="vc-count">
                           <span className={`vc-badge ${vcCount > 0 ? 'has-vcs' : 'no-vcs'}`}>

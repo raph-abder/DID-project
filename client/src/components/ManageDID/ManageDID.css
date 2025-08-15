@@ -84,28 +84,18 @@
   cursor: help;
 }
 
-.trust-badge.very-high {
+.trust-badge.high-trust {
   background-color: #d4edda;
   color: #155724;
 }
 
-.trust-badge.high {
-  background-color: #d1ecf1;
-  color: #0c5460;
-}
-
-.trust-badge.medium {
+.trust-badge.medium-trust {
   background-color: #fff3cd;
   color: #856404;
 }
 
-.trust-badge.low {
+.trust-badge.low-trust {
   background-color: #f8d7da;
-  color: #721c24;
-}
-
-.trust-badge.very-low {
-  background-color: #f5c6cb;
   color: #721c24;
 }
 
