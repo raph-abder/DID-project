@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { ipfsNotificationService } from '../utils/ipfsNotificationService';
 
 const NotificationContext = createContext();
 
@@ -14,12 +15,28 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentWallet, setCurrentWallet] = useState(null);
+  const [ipfsStatus, setIpfsStatus] = useState({ connected: false, peers: 0 });
 
   const getStorageKey = useCallback((wallet) => {
     return wallet ? `didNotifications_${wallet.toLowerCase()}` : null;
   }, []);
 
-  const loadNotifications = useCallback((wallet) => {
+  useEffect(() => {
+    const checkIPFSStatus = async () => {
+      try {
+        const status = await ipfsNotificationService.getConnectionStatus();
+        setIpfsStatus(status);
+      } catch (error) {
+        setIpfsStatus({ connected: false, peers: 0, error: error.message });
+      }
+    };
+
+    checkIPFSStatus();
+    const interval = setInterval(checkIPFSStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadNotifications = useCallback(async (wallet) => {
     try {
       if (!wallet) {
         setNotifications([]);
@@ -28,12 +45,27 @@ export const NotificationProvider = ({ children }) => {
         return;
       }
 
-      const storageKey = getStorageKey(wallet);
-      const stored = localStorage.getItem(storageKey);
-      const notificationList = stored ? JSON.parse(stored) : [];
-      setNotifications(notificationList);
       setCurrentWallet(wallet);
-      
+      let notificationList = [];
+
+      if (ipfsStatus.connected) {
+        try {
+          console.log('[Notifications] Loading from IPFS for wallet:', wallet);
+          const ipfsNotifications = await ipfsNotificationService.retrieveNotifications(wallet);
+          notificationList = ipfsNotifications;
+        } catch (error) {
+          console.warn('[Notifications] IPFS load failed, falling back to localStorage:', error);
+        }
+      }
+
+      if (notificationList.length === 0) {
+        const storageKey = getStorageKey(wallet);
+        const stored = localStorage.getItem(storageKey);
+        notificationList = stored ? JSON.parse(stored) : [];
+        console.log('[Notifications] Loaded from localStorage:', notificationList.length);
+      }
+
+      setNotifications(notificationList);
       const unread = notificationList.filter(n => !n.read).length;
       setUnreadCount(unread);
     } catch (error) {
@@ -41,8 +73,25 @@ export const NotificationProvider = ({ children }) => {
       setNotifications([]);
       setUnreadCount(0);
     }
-  }, [getStorageKey]);
+  }, [getStorageKey, ipfsStatus.connected]);
 
+  useEffect(() => {
+    if (!currentWallet || !ipfsStatus.connected) {
+      return;
+    }
+
+    const pollForNotifications = async () => {
+      try {
+        console.log('[Notifications] Polling for new IPFS notifications...');
+        await loadNotifications(currentWallet);
+      } catch (error) {
+        console.error('[Notifications] Error polling for notifications:', error);
+      }
+    };
+
+    const pollInterval = setInterval(pollForNotifications, 10000);
+    return () => clearInterval(pollInterval);
+  }, [currentWallet, ipfsStatus.connected, loadNotifications]);
 
   const saveNotifications = useCallback((notificationList, wallet = currentWallet) => {
     try {
@@ -121,9 +170,6 @@ export const NotificationProvider = ({ children }) => {
     try {
       const targetDIDData = await contract.methods.getDIDDocument(toDID).call();
       const targetWallet = targetDIDData.controller;
-      const targetStorageKey = getStorageKey(targetWallet);
-      const targetStored = localStorage.getItem(targetStorageKey);
-      const targetNotifications = targetStored ? JSON.parse(targetStored) : [];
 
       const incomingNotification = {
         id: Date.now() + Math.random(),
@@ -137,14 +183,34 @@ export const NotificationProvider = ({ children }) => {
         direction: 'incoming'
       };
 
+      if (ipfsStatus.connected) {
+        try {
+          console.log('[Notifications] Sending credential offer via IPFS to:', targetWallet);
+          const result = await ipfsNotificationService.storeNotification(targetWallet, incomingNotification);
+          
+          if (result.success) {
+            console.log('[Notifications] Credential offer sent via IPFS:', result.cid);
+            return;
+          } else {
+            console.warn('[Notifications] IPFS send failed, falling back to localStorage:', result.error);
+          }
+        } catch (error) {
+          console.warn('[Notifications] IPFS send error, falling back to localStorage:', error);
+        }
+      }
+
+      const targetStorageKey = getStorageKey(targetWallet);
+      const targetStored = localStorage.getItem(targetStorageKey);
+      const targetNotifications = targetStored ? JSON.parse(targetStored) : [];
       const updatedTargetNotifications = [incomingNotification, ...targetNotifications];
       localStorage.setItem(targetStorageKey, JSON.stringify(updatedTargetNotifications));
+      console.log('[Notifications] Credential offer sent via localStorage');
 
     } catch (error) {
       console.error('Error sending credential offer to target wallet:', error);
       throw new Error('Could not send credential offer to target wallet');
     }
-  }, [addNotification, getStorageKey]);
+  }, [addNotification, getStorageKey, ipfsStatus.connected]);
 
   const sendVerificationRequest = useCallback(async (fromDID, toDID, message = '', contract) => {
     addNotification({
@@ -222,6 +288,7 @@ export const NotificationProvider = ({ children }) => {
             await contract.methods.recordCredentialAcceptance(originalRequest.fromDID, originalRequest.toDID)
               .send({ from: account });
           }
+
             
           const requesterDIDData = await contract.methods.getDIDDocument(originalRequest.fromDID).call();
           const requesterWallet = requesterDIDData.controller;
