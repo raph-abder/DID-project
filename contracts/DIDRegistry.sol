@@ -218,6 +218,31 @@ contract DIDRegistry is Ownable {
         emit CredentialAccepted(issuerDID, recipientDID);
     }
 
+    function recordCredentialOfferAcceptance(string memory issuerDID, string memory recipientDID, bytes32 vcHash) external {
+        require(didDocuments[recipientDID].controller == msg.sender, "Not recipient DID controller");
+        require(didDocuments[issuerDID].isActive, "Issuer DID not active");
+        require(didDocuments[recipientDID].isActive, "Recipient DID not active");
+        require(vcHash != 0, "VC hash cannot be empty");
+
+        issuerTrustMetrics[issuerDID].totalIssued++;
+        
+        if (issuerToRecipientAcceptances[issuerDID][recipientDID] == 0) {
+            issuerAcceptedBy[issuerDID].push(recipientDID);
+        }
+        
+        issuerToRecipientAcceptances[issuerDID][recipientDID]++;
+        issuerTrustMetrics[issuerDID].totalAccepted++;
+        issuerTrustMetrics[issuerDID].lastUpdated = block.timestamp;
+        
+        acceptanceHistory.push(AcceptanceRecord({
+            issuerDID: issuerDID,
+            recipientDID: recipientDID,
+            timestamp: block.timestamp
+        }));
+
+        emit CredentialAccepted(issuerDID, recipientDID);
+    }
+
     function updateTrustScore(string memory issuerDID, uint256 newScore) external onlyAdmin {
         issuerTrustMetrics[issuerDID].trustScore = newScore;
         issuerTrustMetrics[issuerDID].lastUpdated = block.timestamp;
