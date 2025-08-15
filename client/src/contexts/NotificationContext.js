@@ -16,6 +16,7 @@ export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentWallet, setCurrentWallet] = useState(null);
   const [ipfsStatus, setIpfsStatus] = useState({ connected: false, peers: 0 });
+  const [trustScoresUpdated, setTrustScoresUpdated] = useState(0);
 
   const getStorageKey = useCallback((wallet) => {
     return wallet ? `didNotifications_${wallet.toLowerCase()}` : null;
@@ -284,11 +285,14 @@ export const NotificationProvider = ({ children }) => {
               originalRequest.toDID, 
               vcHash
             ).send({ from: account });
+            
+            setTrustScoresUpdated(prev => prev + 1);
           } else {
             await contract.methods.recordCredentialAcceptance(originalRequest.fromDID, originalRequest.toDID)
               .send({ from: account });
           }
 
+          setTrustScoresUpdated(prev => prev + 1);
             
           const requesterDIDData = await contract.methods.getDIDDocument(originalRequest.fromDID).call();
           const requesterWallet = requesterDIDData.controller;
@@ -324,6 +328,7 @@ export const NotificationProvider = ({ children }) => {
     notifications,
     unreadCount,
     currentWallet,
+    trustScoresUpdated,
     addNotification,
     markAsRead,
     markAllAsRead,
