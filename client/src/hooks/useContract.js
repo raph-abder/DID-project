@@ -102,6 +102,16 @@ export const useContract = (web3) => {
     }
   }, [contract]);
 
+  const recordCredentialOfferAcceptance = useCallback(async (issuerDID, recipientDID, vcHash, fromAccount) => {
+    if (!contract) return null;
+    try {
+      return await contract.methods.recordCredentialOfferAcceptance(issuerDID, recipientDID, vcHash).send({ from: fromAccount });
+    } catch (error) {
+      console.error("Error recording credential offer acceptance:", error);
+      throw error;
+    }
+  }, [contract]);
+
   useEffect(() => {
     if (web3 && CONTRACT_ADDRESSES.DID_REGISTRY) {
       setContractInstance(CONTRACT_ADDRESSES.DID_REGISTRY);
@@ -119,6 +129,7 @@ export const useContract = (web3) => {
     addTrustedIssuer,
     removeTrustedIssuer,
     getAllDIDs,
-    getDIDDocument
+    getDIDDocument,
+    recordCredentialOfferAcceptance
   };
 };
