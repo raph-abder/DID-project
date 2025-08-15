@@ -32,8 +32,12 @@ export class TrustScoring {
           
           for (const recipientDID of acceptedBy) {
             if (graph.has(recipientDID)) {
+
               graph.get(recipientDID).outLinks.push(issuerDID);
               graph.get(issuerDID).inLinks.push(recipientDID);
+              
+              graph.get(issuerDID).outLinks.push(recipientDID);
+              graph.get(recipientDID).inLinks.push(issuerDID);
             }
           }
         } catch (error) {
@@ -91,7 +95,7 @@ export class TrustScoring {
     const scores = Array.from(graph.entries()).map(([id, node]) => ({
       id: id.substring(0, 8) + '...',
       rawPageRank: node.pageRank.toFixed(6),
-      score: Math.round(node.pageRank * 10000),
+      score: Math.round(node.pageRank * 1000),
       inLinks: node.inLinks.length,
       outLinks: node.outLinks.length,
       isTrusted: node.isTrusted
@@ -108,7 +112,7 @@ export class TrustScoring {
       
       const trustScores = new Map();
       for (const [nodeId, node] of rankedGraph) {
-        const normalizedScore = Math.round(node.pageRank * 10000);
+        const normalizedScore = Math.round(node.pageRank * 1000);
         trustScores.set(nodeId, {
           trustScore: normalizedScore,
           pageRank: node.pageRank,
