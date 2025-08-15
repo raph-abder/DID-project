@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useContract } from '../../hooks/useContract';
 import { useDIDData } from '../../hooks/useDIDData';
+import { useNotifications } from '../../contexts/NotificationContext';
 import ResultDisplay from '../ResultDisplay/ResultDisplay';
-import IssuerCapabilityCheck from './IssuerCapabilityCheck';
 import DIDSelector from './DIDSelector';
 import VCForm from './VCForm';
-import { createVerifiableCredential } from '../../utils/vcCreator';
 import './IssueVC.css';
 
 const IssueVC = ({ web3State }) => {
@@ -18,9 +17,11 @@ const IssueVC = ({ web3State }) => {
     getDIDDocument
   } = useContract(web3);
 
-  const { userDIDs, allDIDs, canIssue, loading, loadUserDIDs, loadAllDIDs } = useDIDData(
+  const { userDIDs, allDIDs, loading, loadUserDIDs, loadAllDIDs } = useDIDData(
     contract, account, getDIDDocument, checkIsTrustedIssuer, getAllDIDs
   );
+
+  const { sendCredentialOffer } = useNotifications();
 
   const [selectedIssuerDID, setSelectedIssuerDID] = useState('');
   const [selectedRecipientDID, setSelectedRecipientDID] = useState('');
@@ -44,10 +45,7 @@ const IssueVC = ({ web3State }) => {
 
   useEffect(() => {
     if (userDIDs.length > 0 && !selectedIssuerDID) {
-      const firstIssuerDID = userDIDs.find(did => did.canIssue);
-      if (firstIssuerDID) {
-        setSelectedIssuerDID(firstIssuerDID.id);
-      }
+      setSelectedIssuerDID(userDIDs[0].id);
     }
   }, [userDIDs, selectedIssuerDID]);
 
@@ -55,23 +53,16 @@ const IssueVC = ({ web3State }) => {
     setVcData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleCreateVC = async () => {
+  const handleSendOffer = async () => {
     try {
       setIsCreating(true);
       setResult(null);
 
-      const vcResult = await createVerifiableCredential({
-        web3,
-        account,
-        selectedIssuerDID,
-        selectedRecipientDID,
-        vcData,
-        getDIDDocument
-      });
+      await sendCredentialOffer(selectedIssuerDID, selectedRecipientDID, vcData, contract);
 
       setResult({
         type: 'success',
-        message: `Verifiable Credential issued successfully!\n\nRecipient: ${vcResult.recipient}\nIPFS Hash: ${vcResult.ipfsHash}\nIPFS URL: ${vcResult.ipfsUrl}\nStored at: ${vcResult.timestamp}\n${vcResult.isSimulated ? '\nUsing local simulation (IPFS keys not configured)' : '\nSuccessfully stored on IPFS network'}\n\nThe recipient can now view their encrypted VC by clicking on their DID in the Manage DIDs page.`
+        message: `Credential offer sent successfully!\n\nRecipient: ${selectedRecipientDID}\nCredential Type: ${vcData.type}\nSubject: ${vcData.subject}\n\nThe recipient will receive a notification and can choose to accept or reject the credential offer.`
       });
 
       setVcData({
@@ -86,12 +77,13 @@ const IssueVC = ({ web3State }) => {
     } catch (error) {
       setResult({
         type: 'error',
-        message: `Error creating Verifiable Credential: ${error.message}`
+        message: `Error sending credential offer: ${error.message}`
       });
     } finally {
       setIsCreating(false);
     }
   };
+
 
   if (web3Loading) {
     return (
@@ -112,11 +104,10 @@ const IssueVC = ({ web3State }) => {
 
       {contract && account && (
         <>
-          <IssuerCapabilityCheck userDIDs={userDIDs} canIssue={canIssue} />
-          
-          {canIssue && (
+          {userDIDs.length > 0 && (
             <div className="card">
-              <h3>Create Verifiable Credential</h3>
+              <h3>Send Credential Offer</h3>
+              <p>Anyone can send credential offers. Recipients can choose to accept or reject them.</p>
               
               <div className="vc-form">
                 <DIDSelector
@@ -136,11 +127,11 @@ const IssueVC = ({ web3State }) => {
                 />
 
                 <button 
-                  onClick={handleCreateVC}
+                  onClick={handleSendOffer}
                   disabled={isCreating || !selectedIssuerDID || !selectedRecipientDID || !vcData.subject}
                   className="issue-btn"
                 >
-                  {isCreating ? 'Creating VC...' : 'Issue Verifiable Credential'}
+                  {isCreating ? 'Sending Offer...' : 'Send Credential Offer'}
                 </button>
               </div>
             </div>
