@@ -209,8 +209,19 @@ export const NotificationProvider = ({ children }) => {
         const originalRequest = currentNotifications.find(n => n.id === requestId);
         
         if (originalRequest && originalRequest.fromDID && originalRequest.toDID) {
-          await contract.methods.recordCredentialAcceptance(originalRequest.fromDID, originalRequest.toDID)
-            .send({ from: account });
+          if (originalRequest.type === 'credential_offer') {
+            const vcString = JSON.stringify(encryptedVC);
+            const vcHash = web3.utils.keccak256(vcString);
+            
+            await contract.methods.recordCredentialOfferAcceptance(
+              originalRequest.fromDID, 
+              originalRequest.toDID, 
+              vcHash
+            ).send({ from: account });
+          } else {
+            await contract.methods.recordCredentialAcceptance(originalRequest.fromDID, originalRequest.toDID)
+              .send({ from: account });
+          }
             
           const requesterDIDData = await contract.methods.getDIDDocument(originalRequest.fromDID).call();
           const requesterWallet = requesterDIDData.controller;
