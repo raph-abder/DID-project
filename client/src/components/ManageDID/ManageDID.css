@@ -29,6 +29,11 @@
   margin-bottom: 20px;
 }
 
+.header-buttons {
+  display: flex;
+  gap: 10px;
+}
+
 .refresh-btn {
   padding: 8px 16px;
   background-color: #007bff;
@@ -46,6 +51,77 @@
 .refresh-btn:disabled {
   background-color: #6c757d;
   cursor: not-allowed;
+}
+
+.clear-btn {
+  padding: 8px 16px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.clear-btn:hover {
+  background-color: #c82333;
+}
+
+.clear-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.trust-score {
+  text-align: center;
+}
+
+.trust-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 12px;
+  cursor: help;
+}
+
+.trust-badge.very-high {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.trust-badge.high {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.trust-badge.medium {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.trust-badge.low {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.trust-badge.very-low {
+  background-color: #f5c6cb;
+  color: #721c24;
+}
+
+.trust-explanation {
+  background-color: #e7f3ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 15px;
+}
+
+.trust-explanation p {
+  margin: 0;
+  color: #0c5460;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .loading-text {

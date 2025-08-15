@@ -47,6 +47,69 @@
   margin-bottom: 4px;
 }
 
+.trust-info {
+  margin: 10px 0;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #007bff;
+}
+
+.trust-score-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trust-label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 13px;
+}
+
+.trust-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 11px;
+  cursor: help;
+}
+
+.trust-badge.very-high {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.trust-badge.high {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.trust-badge.medium {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.trust-badge.low {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.trust-badge.very-low {
+  background-color: #f5c6cb;
+  color: #721c24;
+}
+
+.trusted-badge {
+  padding: 2px 6px;
+  background-color: #28a745;
+  color: white;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
 .notification-title {
   margin: 0;
   font-size: 0.95rem;
