@@ -1,17 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { useContract } from '../../hooks/useContract';
 import { VCEncryption } from '../../utils/vcEncryption';
+import { createVerifiableCredential } from '../../utils/vcCreator';
+import { createTrustScoring } from '../../utils/trustScoring';
 import VCSelectionModal from './VCSelectionModal';
 import './NotificationItem.css';
 
 const NotificationItem = ({ notification, isCompact = false, onAction, web3, account }) => {
   const { markAsRead, respondToRequest, deleteNotification } = useNotifications();
-  const { contract } = useContract(web3);
+  const { contract, getDIDDocument } = useContract(web3);
   const [showVCModal, setShowVCModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [decryptedVC, setDecryptedVC] = useState(null);
   const [verificationResult, setVerificationResult] = useState(null);
+  const [issuerTrustScore, setIssuerTrustScore] = useState(null);
+
+  useEffect(() => {
+    const loadTrustScore = async () => {
+      if (notification.type === 'credential_offer' && notification.fromDID && contract) {
+        try {
+          const trustScoring = createTrustScoring(contract);
+          const trustScores = await trustScoring.calculateTrustScores();
+          const issuerScore = trustScores.get(notification.fromDID);
+          setIssuerTrustScore(issuerScore);
+        } catch (error) {
+          console.warn('Could not load trust score for issuer:', error);
+        }
+      }
+    };
+    
+    loadTrustScore();
+  }, [notification, contract]);
+
+  const formatTrustScore = (score) => {
+    return (score / 1000).toFixed(3);
+  };
+
+  const getTrustLevel = (score) => {
+    const normalizedScore = score / 1000;
+    if (normalizedScore >= 2.0) return 'very-high';
+    if (normalizedScore >= 1.5) return 'high';
+    if (normalizedScore >= 1.0) return 'medium';
+    if (normalizedScore >= 0.5) return 'low';
+    return 'very-low';
+  };
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -31,6 +64,16 @@ const NotificationItem = ({ notification, isCompact = false, onAction, web3, acc
   };
 
   const getNotificationIcon = () => {
+    if (notification.type === 'credential_offer') {
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" stroke="#f39c12" strokeWidth="2" fill="none"/>
+          <line x1="8" y1="21" x2="16" y2="21" stroke="#f39c12" strokeWidth="2"/>
+          <line x1="12" y1="17" x2="12" y2="21" stroke="#f39c12" strokeWidth="2"/>
+          <path d="M7 10l2 2 4-4" stroke="#f39c12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      );
+    }
     if (notification.type === 'verification_request') {
       if (notification.direction === 'incoming') {
         return (
@@ -67,6 +110,13 @@ const NotificationItem = ({ notification, isCompact = false, onAction, web3, acc
   };
 
   const getNotificationTitle = () => {
+    if (notification.type === 'credential_offer') {
+      if (notification.direction === 'incoming') {
+        return `Credential offer from ${notification.fromDID}`;
+      } else {
+        return `Credential offer sent to ${notification.toDID}`;
+      }
+    }
     if (notification.type === 'verification_request') {
       if (notification.direction === 'incoming') {
         return `Verification request from ${notification.fromDID}`;
@@ -81,6 +131,18 @@ const NotificationItem = ({ notification, isCompact = false, onAction, web3, acc
   };
 
   const getNotificationBody = () => {
+    if (notification.type === 'credential_offer') {
+      if (notification.direction === 'incoming') {
+        const statusText = notification.status === 'pending' ? 'Awaiting your response' : 
+                          notification.status === 'accepted' ? 'Accepted' : 'Refused';
+        const credData = notification.credentialData;
+        return `${statusText} - ${credData?.type || 'Credential'}: ${credData?.subject || 'No subject'}`;
+      } else {
+        const statusText = notification.status === 'pending' ? 'Awaiting response' :
+                          notification.status === 'accepted' ? 'Accepted' : 'Refused';
+        return statusText;
+      }
+    }
     if (notification.type === 'verification_request') {
       if (notification.direction === 'incoming') {
         const statusText = notification.status === 'pending' ? 'Awaiting your response' : 
@@ -165,6 +227,32 @@ const NotificationItem = ({ notification, isCompact = false, onAction, web3, acc
       if (vc.proof.signature) {
         console.log('Found direct signature format');
       }
+
+      if (vc.issuer && contract) {
+        try {
+          const didDoc = await getDIDDocument(vc.issuer);
+          if (!didDoc.isActive) {
+            return {
+              isValid: false,
+              error: 'Issuer DID is not active',
+              issuer: vc.issuer,
+              subject: vc.credentialSubject,
+              issuanceDate: vc.issuanceDate,
+              signatureVerified: true
+            };
+          }
+        } catch (error) {
+          console.warn('Could not verify issuer DID status:', error);
+          return {
+            isValid: false,
+            error: 'Could not verify issuer DID status: ' + error.message,
+            issuer: vc.issuer,
+            subject: vc.credentialSubject,
+            issuanceDate: vc.issuanceDate,
+            signatureVerified: true
+          };
+        }
+      }
       
       return {
         isValid: true,
@@ -187,9 +275,46 @@ const NotificationItem = ({ notification, isCompact = false, onAction, web3, acc
     }
   };
 
+  const handleAcceptCredentialOffer = async () => {
+    if (notification.type === 'credential_offer' && notification.direction === 'incoming') {
+      setIsProcessing(true);
+      try {
+        console.log('Accepting credential offer:', {
+          fromDID: notification.fromDID,
+          toDID: notification.toDID,
+          credentialData: notification.credentialData
+        });
+
+        const vcResult = await createVerifiableCredential({
+          web3,
+          account,
+          selectedIssuerDID: notification.fromDID,
+          selectedRecipientDID: notification.toDID,
+          vcData: notification.credentialData,
+          getDIDDocument,
+          contract
+        });
+
+        console.log('VC created successfully:', vcResult);
+
+        const verificationResult = await verifyVCSignature(vcResult.originalVC);
+        console.log('VC verification result:', verificationResult);
+
+        respondToRequest(notification.id, 'accepted', vcResult.encryptedVC, verificationResult, contract, web3, account);
+        onAction?.();
+      } catch (error) {
+        console.error('Error accepting credential offer:', error);
+        alert('Error accepting credential: ' + error.message);
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  };
+
   const handleRefuse = () => {
-    if (notification.type === 'verification_request' && notification.direction === 'incoming') {
-      respondToRequest(notification.id, 'refused', null, null, contract);
+    if ((notification.type === 'verification_request' || notification.type === 'credential_offer') && 
+        notification.direction === 'incoming') {
+      respondToRequest(notification.id, 'refused', null, null, contract, web3, account);
       onAction?.();
     }
   };
@@ -204,7 +329,7 @@ const NotificationItem = ({ notification, isCompact = false, onAction, web3, acc
       const verificationResult = await verifyVCSignature(vcData);
       
       
-      respondToRequest(notification.id, 'accepted', encryptedVC, verificationResult, contract);
+      respondToRequest(notification.id, 'accepted', encryptedVC, verificationResult, contract, web3, account);
       setShowVCModal(false);
       onAction?.();
     } catch (error) {
@@ -232,9 +357,9 @@ const NotificationItem = ({ notification, isCompact = false, onAction, web3, acc
     onAction?.();
   };
 
-  const showActions = notification.type === 'verification_request' && 
+  const showActions = ((notification.type === 'verification_request' || notification.type === 'credential_offer') && 
                      notification.direction === 'incoming' && 
-                     notification.status === 'pending';
+                     notification.status === 'pending');
 
   const showDecryptedData = notification.type === 'verification_response' && 
                            (decryptedVC || verificationResult);
@@ -256,6 +381,30 @@ const NotificationItem = ({ notification, isCompact = false, onAction, web3, acc
         
         <p className="notification-body">{getNotificationBody()}</p>
         
+        {notification.type === 'credential_offer' && notification.direction === 'incoming' && issuerTrustScore && (
+          <div className="trust-info">
+            <div className="trust-score-display">
+              <span className="trust-label">Issuer Trust Score: </span>
+              <span 
+                className={`trust-badge ${getTrustLevel(issuerTrustScore.trustScore)}`}
+                title={`Issuer Trust Score: ${formatTrustScore(issuerTrustScore.trustScore)}
+
+Score Interpretation:
+• 2.0+ = Very High Trust - Widely accepted by network
+• 1.5-2.0 = High Trust - Well-regarded issuer
+• 1.0-1.5 = Medium Trust - Some network acceptance
+• 0.5-1.0 = Low Trust - Limited acceptance history
+• <0.5 = Very Low Trust - Few or no acceptances`}
+              >
+                {formatTrustScore(issuerTrustScore.trustScore)}
+              </span>
+              {issuerTrustScore.isTrusted && (
+                <span className="trusted-badge">✓ Trusted Issuer</span>
+              )}
+            </div>
+          </div>
+        )}
+        
         {showDecryptedData && (
           <div className="verification-details">
             <h5>Verification Results:</h5>
@@ -263,7 +412,7 @@ const NotificationItem = ({ notification, isCompact = false, onAction, web3, acc
               <p className="processing">Decrypting and verifying...</p>
             ) : verificationResult ? (
               <div className={`verification-result ${verificationResult.isValid ? 'valid' : 'invalid'}`}>
-                <p><strong>Status:</strong> {verificationResult.isValid ? '✅ Valid' : '❌ Invalid'}</p>
+                <p><strong>Status:</strong> {verificationResult.isValid ? 'Valid' : 'Invalid'}</p>
                 {verificationResult.isValid && (
                   <>
                     <p><strong>Issuer:</strong> {verificationResult.issuer}</p>
@@ -284,11 +433,15 @@ const NotificationItem = ({ notification, isCompact = false, onAction, web3, acc
               className="accept-btn"
               onClick={(e) => {
                 e.stopPropagation();
-                handleAccept();
+                if (notification.type === 'credential_offer') {
+                  handleAcceptCredentialOffer();
+                } else {
+                  handleAccept();
+                }
               }}
               disabled={isProcessing}
             >
-              Accept
+              {isProcessing ? 'Processing...' : 'Accept'}
             </button>
             <button 
               className="refuse-btn"

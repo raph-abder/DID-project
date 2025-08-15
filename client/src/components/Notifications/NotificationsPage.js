@@ -34,6 +34,7 @@ const NotificationsPage = ({ web3State }) => {
     if (filter === 'unread') return !notification.read;
     if (filter === 'requests') return notification.type === 'verification_request';
     if (filter === 'responses') return notification.type === 'verification_response';
+    if (filter === 'offers') return notification.type === 'credential_offer';
     if (filter === 'incoming') return notification.direction === 'incoming';
     if (filter === 'outgoing') return notification.direction === 'outgoing';
     return true;
@@ -69,6 +70,8 @@ const NotificationsPage = ({ web3State }) => {
         return notifications.filter(n => n.type === 'verification_request').length;
       case 'responses':
         return notifications.filter(n => n.type === 'verification_response').length;
+      case 'offers':
+        return notifications.filter(n => n.type === 'credential_offer').length;
       case 'incoming':
         return notifications.filter(n => n.direction === 'incoming').length;
       case 'outgoing':
@@ -101,7 +104,8 @@ const NotificationsPage = ({ web3State }) => {
             {[
               { key: 'all', label: 'All' },
               { key: 'unread', label: 'Unread' },
-              { key: 'requests', label: 'Requests' },
+              { key: 'offers', label: 'Credential Offers' },
+              { key: 'requests', label: 'Verification Requests' },
               { key: 'responses', label: 'Responses' },
               { key: 'incoming', label: 'Incoming' },
               { key: 'outgoing', label: 'Outgoing' }
