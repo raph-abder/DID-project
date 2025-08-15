@@ -77,14 +77,6 @@ export const createVerifiableCredential = async ({
     selectedIssuerDID
   );
 
-  if (contract) {
-    try {
-      await contract.methods.recordCredentialIssuance(selectedIssuerDID, selectedRecipientDID)
-        .send({ from: account });
-    } catch (error) {
-      console.warn('Could not record credential issuance on-chain:', error);
-    }
-  }
 
   return {
     success: true,
