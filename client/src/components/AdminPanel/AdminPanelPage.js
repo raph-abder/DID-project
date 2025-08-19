@@ -7,9 +7,7 @@ const AdminPanelPage = ({ web3State }) => {
   const { web3, account, isConnected, isLoading, error: web3Error, connectWallet } = web3State;
   const { 
     contract, 
-    contractAddress, 
     error: contractError, 
-    setContract,
     checkIsTrustedIssuer,
     checkIsAdmin,
     getAdminDID,
